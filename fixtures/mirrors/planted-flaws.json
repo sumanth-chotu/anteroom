@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-08-09T05:00:54.650Z",
+  "deckPath": "fixtures/decks/planted-flaws/deck.pdf",
+  "readAs": "A real-time AI platform that scores online payment transactions in under 200ms and returns accept, review, or decline before settlement to reduce fraud.",
+  "visualBrief": "Photographic documentary shot of an empty operations desk at night, no people present. A single unattended monitor shows a plain queue of payment transactions each marked accept, review, or decline with millisecond timing; no brand marks, no readable names, no other UI chrome established. The room and the user remain unspecified.",
+  "imageUrl": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-281688eb-4368-9c2d-b90c-8814b235c6ea-b27c9a0a.jpeg",
+  "image": "/mirrors/planted-flaws.jpg",
+  "slideOne": "/mirrors/slide1-1.png",
+  "couldNotPicture": [
+    {
+      "thing": "I couldn't picture who actually sits in front of this or operates it day to day (merchant, PSP, fraud analyst, or pure API with no human).",
+      "slideRef": 1
+    },
+    {
+      "thing": "I couldn't picture what the product's own screen or workflow looks like beyond the three decision labels."
+    },
+    {
+      "thing": "I couldn't picture why a buyer would pick this over incumbents — no competitive shape formed at all."
+    },
+    {
+      "thing": "I couldn't picture the founders or any fraud/payments track record behind the claim."
+    },
+    {
+      "thing": "I couldn't picture what the 'volume scored' curve was actually measuring (units, time axis, start/end)."
+    }
+  ],
+  "slideOneDrift": {
+    "drifted": true,
+    "note": "Slide one frames a generic AI intelligence platform for modern teams; the rest of the deck is specifically real-time payment fraud scoring."
+  },
+  "cost": {
+    "seconds": 25.494,
+    "usd": 0.2
+  }
+}

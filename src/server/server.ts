@@ -33,6 +33,7 @@ import type { PreReadMemo } from '../preread/types.ts';
 import { buildCategoryBrief } from '../category/brief.ts';
 import type { CategoryBrief } from '../category/types.ts';
 import { profileView, sessionView, snapshotUsage, type UsageSnapshot } from './view.ts';
+import { buildMirror } from '../mirror/mirror.ts';
 import { createVoiceRelay } from '../voice/relay.ts';
 import { createDuoRelay } from '../voice/duo-relay.ts';
 import { mountWebSocketRoutes } from './ws-router.ts';
@@ -175,6 +176,49 @@ const routes: Array<{
         json(res, 200, { memoId, memo, precomputed: true });
       } catch {
         json(res, 404, { error: 'no pre-read fixture — run: npm run preread -- <deck> --save' });
+      }
+    },
+  },
+
+  {
+    /**
+     * The mirror: what the investor pictured from the deck.
+     *
+     * Serves the committed fixture when one exists and builds live otherwise.
+     * The cached path matters for a demo — generation is ~25s, which is a long
+     * silence in front of an audience, and the artifact is deterministic enough
+     * that regenerating it on stage buys nothing.
+     */
+    method: 'POST',
+    pattern: /^\/api\/mirror$/,
+    async handle(req, res) {
+      const body = await readJson(req);
+      const memoId = typeof body['memoId'] === 'string' ? body['memoId'] : undefined;
+      const memo = memoId ? memos.get(memoId) : undefined;
+
+      if (body['cached'] !== false) {
+        try {
+          const raw = await readFile(
+            join(HERE, '..', '..', 'fixtures', 'mirrors', 'planted-flaws.json'),
+            'utf8',
+          );
+          json(res, 200, { ...(JSON.parse(raw) as object), precomputed: true });
+          return;
+        } catch {
+          // No fixture — fall through and build it.
+        }
+      }
+
+      if (!memo) {
+        json(res, 400, { error: 'no pre-read loaded — load a deck first' });
+        return;
+      }
+
+      try {
+        const mirror = await buildMirror({ memo, slug: `live_${Date.now()}` });
+        json(res, 201, { ...mirror, precomputed: false });
+      } catch (error) {
+        json(res, 500, { error: error instanceof Error ? error.message : 'mirror failed' });
       }
     },
   },
@@ -372,6 +416,24 @@ const server = createServer(async (req, res) => {
       res.end(bytes);
     } catch {
       res.writeHead(404).end('no such avatar — run: npm run avatars -- all');
+    }
+    return;
+  }
+
+  // Mirror assets: the generated image and the rendered slide 1.
+  const mirrorAsset = /^\/mirrors\/([A-Za-z0-9_-]+\.(?:jpg|png))$/.exec(path);
+  if (mirrorAsset) {
+    const name = mirrorAsset[1] ?? '';
+    try {
+      const bytes = await readFile(join(HERE, '..', '..', 'fixtures', 'mirrors', name));
+      res.writeHead(200, {
+        'Content-Type': name.endsWith('.png') ? 'image/png' : 'image/jpeg',
+        'Content-Length': bytes.length,
+        'Cache-Control': 'public, max-age=3600',
+      });
+      res.end(bytes);
+    } catch {
+      res.writeHead(404).end('no such mirror asset — run: npm run mirror -- --save');
     }
     return;
   }
