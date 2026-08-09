@@ -157,7 +157,7 @@
   .empty { color: var(--faint); font-size: 12px; font-style: italic; }
 
   /* ── voice ── */
-  #voice.live { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+  #voice.live, #demo.live { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
   .voicebar {
     display: none; align-items: center; gap: 14px;
     padding: 12px 26px; border-top: 1px solid var(--line); background: var(--panel);
@@ -232,6 +232,7 @@
   <select id="profile"></select>
   <button id="start" class="primary">New session</button>
   <button id="voice">🎙 Voice</button>
+  <button id="demo" title="Two AI agents pitch each other — generates a demo script">▶ Auto demo</button>
   <button id="debrief" disabled>Debrief</button>
   <button id="export" disabled>Export</button>
 </header>
@@ -530,6 +531,99 @@ function endVoice() {
 }
 
 $('endvoice').onclick = endVoice;
+
+// ── auto demo: two agents, no human ─────────────────────────────────────────
+let demoSocket = null;
+let demoCtx = null;
+let demoCursor = 0;
+const demoScript = [];
+
+$('demo').onclick = () => {
+  if (demoSocket) { demoSocket.close(); return; }
+  showError(null);
+  demoScript.length = 0;
+  $('scroll').innerHTML =
+    '<p class="empty" style="padding:30px 0;text-align:center">Two agents warming up<span class="spinner">…</span></p>';
+  $('demo').textContent = '■ stop';
+  $('demo').classList.add('live');
+
+  demoCtx = new AudioContext({ sampleRate: 24000 });
+  demoCursor = 0;
+
+  const url = new URL('/duo', location.href);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.searchParams.set('profile', $('profile').value);
+  url.searchParams.set('turns', '6');
+
+  demoSocket = new WebSocket(url);
+  demoSocket.binaryType = 'arraybuffer';
+  demoSocket.onopen = () => demoSocket.send(JSON.stringify({ memo }));
+
+  demoSocket.onmessage = (e) => {
+    if (e.data instanceof ArrayBuffer) { playDemoChunk(e.data); return; }
+    const event = JSON.parse(e.data);
+    if (event.kind === 'turn') {
+      const who = event.speaker === 'investor'
+        ? (memo ? 'Investor' : 'Investor')
+        : 'Founder (AI)';
+      if ($('scroll').querySelector('.empty')) $('scroll').innerHTML = '';
+      $('scroll').insertAdjacentHTML('beforeend',
+        `<div class="turn ${event.speaker === 'investor' ? 'investor' : 'founder'}">
+           <div class="who">${esc(who)}</div><div class="body">${esc(event.text)}</div></div>`);
+      demoScript.push(`**${who}:** ${event.text}`);
+      $('scroll').scrollTop = $('scroll').scrollHeight;
+    } else if (event.kind === 'claim') {
+      $('scroll').insertAdjacentHTML('beforeend',
+        `<div class="annot" style="margin:0 0 12px auto;justify-content:flex-end">
+           <span class="chip claim">${esc(event.metric)} = ${esc(event.value)}</span></div>`);
+    } else if (event.kind === 'finding') {
+      $('scroll').insertAdjacentHTML('beforeend',
+        `<div class="finding ${event.severity}" style="margin:0 0 14px">
+           <div class="sum">${esc(event.summary)}</div></div>`);
+      demoScript.push(`> *[ledger: ${event.summary}]*`);
+    } else if (event.kind === 'error') {
+      showError(event.message);
+    } else if (event.kind === 'done') {
+      offerScript();
+    }
+  };
+  demoSocket.onclose = () => {
+    demoSocket = null;
+    $('demo').textContent = '▶ Auto demo';
+    $('demo').classList.remove('live');
+    if (demoScript.length) offerScript();
+  };
+};
+
+function playDemoChunk(arrayBuffer) {
+  const pcm = new Int16Array(arrayBuffer);
+  if (!pcm.length || !demoCtx) return;
+  const buffer = demoCtx.createBuffer(1, pcm.length, 24000);
+  const channel = buffer.getChannelData(0);
+  for (let i = 0; i < pcm.length; i++) channel[i] = pcm[i] / 0x8000;
+  const source = demoCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(demoCtx.destination);
+  const now = demoCtx.currentTime;
+  if (demoCursor < now) demoCursor = now + 0.02;
+  source.start(demoCursor);
+  demoCursor += buffer.duration;
+}
+
+let scriptOffered = false;
+function offerScript() {
+  if (scriptOffered || !demoScript.length) return;
+  scriptOffered = true;
+  const blob = new Blob([`# Demo script\n\n${demoScript.join('\n\n')}\n`], { type: 'text/markdown' });
+  const href = URL.createObjectURL(blob);
+  $('scroll').insertAdjacentHTML('beforeend',
+    `<div style="margin:24px 0;text-align:center">
+       <a href="${href}" download="demo-script.md"
+          style="color:var(--accent);font-size:13px">↓ download script (${demoScript.length} lines)</a>
+     </div>`);
+  $('scroll').scrollTop = $('scroll').scrollHeight;
+  setTimeout(() => { scriptOffered = false; }, 1000);
+}
 $('barge').onclick = () => voice?.interrupt();
 
 const POSTURE_LABEL = {

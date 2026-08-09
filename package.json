@@ -18,7 +18,8 @@
     "fixture:deck": "\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=fixtures/decks/planted-flaws/deck.pdf fixtures/decks/planted-flaws/deck.html",
     "preread": "node --env-file=.env --experimental-strip-types src/cli/preread.ts",
     "probe:realtime": "node --env-file=.env --experimental-strip-types src/cli/probe-realtime.ts",
-    "probe:relay": "node --experimental-strip-types src/cli/probe-relay.ts"
+    "probe:relay": "node --experimental-strip-types src/cli/probe-relay.ts",
+    "duo": "node --env-file=.env --experimental-strip-types src/cli/duo.ts"
   },
   "dependencies": {
     "ws": "^8.21.3",

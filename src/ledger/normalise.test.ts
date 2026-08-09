@@ -28,6 +28,18 @@ describe('normaliseSpokenClaim', () => {
     assert.equal(n('design partner customers'), 'design_partners');
   });
 
+  test('"per X" is a rate, not a population — caught live', () => {
+    // "revenue per paying customer = 4000" was normalising to customers_paying,
+    // so a $4,000 price was compared against 4 customers and produced a
+    // nonsense contradiction. Per-unit phrasing must win over the ladder.
+    assert.equal(n('revenue per paying customer'), 'price_point');
+    assert.equal(n('per customer per month'), 'price_point');
+    assert.equal(n('ACV'), 'price_point');
+    assert.equal(n('deal size'), 'price_point');
+    // ...without breaking the plain ladder term.
+    assert.equal(n('paying customers'), 'customers_paying');
+  });
+
   test('revenue terms', () => {
     assert.equal(n('ARR'), 'arr');
     assert.equal(n('annual recurring revenue'), 'arr');

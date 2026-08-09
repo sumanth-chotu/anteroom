@@ -476,3 +476,54 @@ speech, and `note_claim` firing from spoken numbers. Everything up to the mic is
 `npm run probe:relay`, which does exactly what the browser does minus the audio input.
 
 **Next:** a human-in-the-loop voice test, then Phase 3 scoring.
+
+---
+
+## 2026-08-08 — Two-agent demo
+
+**Phase:** 2 · **Commit:** pending
+
+**What:** `npm run duo` and an **Auto demo** button. An AI founder pitches the AI investor —
+two `grok-voice-latest` sessions with different voices, audio piped between them. Outputs a
+markdown script and a .wav.
+
+**Two real voice agents, not a text stand-in.** A text-driven fake founder would have skipped
+the realtime *input* path entirely — the one thing the human voice mode still can't verify
+without a microphone. Piping the founder's synthesised speech into the investor's input buffer
+exercises it for real.
+
+**Half duplex on purpose.** Turn-taking is orchestrated rather than leaving both sockets open
+with server VAD. Full duplex is more realistic but produces two agents talking over each other,
+and the output here is a recording and a script — both need clean, separable turns. Barge-in
+belongs to the human mode.
+
+**The founder is deliberately competent.** A strawman makes a boring demo and a useless test:
+the investor catches everything in one turn and there is no arc. Maya Rao has a real business,
+knows her numbers, and carries the exact flaws a real seed founder carries — she says "twelve
+customers" and concedes the four/eight split cleanly when pressed.
+
+**Learned — three bugs, all found by running it:**
+
+1. **The founder was too honest.** First version volunteered the four/eight split unprompted, so
+   the ledger never fired and the demo had no money moment. Tightened: lead with the flattering
+   framing, concede fully when asked. Zero contradictions → four.
+
+2. **`revenue per paying customer` normalised to `customers_paying`** — a $4,000 price compared
+   against 4 customers. Per-unit phrasing now wins over the commitment ladder. Test added.
+
+3. **A turn spent entirely on tool calls produces no speech**, which is correct model behaviour
+   (`note_claim` is silent) but left the conversation with nothing to say — the investor logged
+   four claims, said nothing, and the founder timed out. Now a tool-only turn triggers one
+   continuation so the agent actually speaks.
+
+**Also learned, by testing rather than assuming:** `role: "system"` conversation items *are*
+accepted, but the model treats them as meta-conversation and merely acknowledges them
+(*"Understood. What's the play?"*). `role: "user"` with a bracketed direction actually redirects
+the next question. Both the duo and the human relay now use `user`.
+
+**Measured:** 10 turns · 123s of audio · 44s wall clock · 9 claims · 3 contradictions.
+
+The generated script is genuinely usable — the ledger steer is visible in it:
+*"40% growth on four is two more. Give me the absolute numbers month by month."*
+
+**Next:** Phase 3 — isolated consensus grader and the full report.

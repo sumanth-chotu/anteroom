@@ -17,6 +17,15 @@ import type { MetricKey } from './types.ts';
 type Rule = [RegExp, MetricKey];
 
 const RULES: Rule[] = [
+  // ── Per-unit economics, BEFORE the ladder ──────────────────────────────────
+  //
+  // "revenue per paying customer" contains "paying customer" and would otherwise
+  // match the ladder, turning a $4,000 price into a count of 4,000 customers —
+  // observed live, and it produced a nonsense contradiction against "4 paying".
+  // Anything phrased "per <unit>" is a rate, not a population.
+  [/\bper\s+(paying\s+|active\s+)?(customer|client|account|seat|user|month|year|transaction)/, 'price_point'],
+  [/\b(acv|arpu|arpa|contract value|deal size|price point|pricing)/, 'price_point'],
+
   // ── Commitment ladder — most specific first, always ────────────────────────
   [/\b(paying|paid)\s+(customer|client|account|logo|user)/, 'customers_paying'],
   [/\bcustomers?\s+(who|that)\s+pay/, 'customers_paying'],

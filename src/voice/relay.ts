@@ -112,15 +112,19 @@ export function attachVoiceRelay(server: Server, path = '/voice'): WebSocketServ
     /**
      * Inject a steer into the live conversation.
      *
-     * `conversation.item.create` with role `system`, then `response.create` —
-     * the investor picks it up on its next turn. This is Loop 2 closing the
-     * circle: a contradiction detected in code becomes a spoken question.
+     * A bracketed `conversation.item.create` the investor picks up on its next
+     * turn. This is Loop 2 closing the circle: a contradiction detected in code
+     * becomes a spoken question.
      */
     const steer = (text: string) => {
+      // role:user, not role:system. Both are accepted by the API, but a system
+      // item is treated as meta-conversation and merely acknowledged, while a
+      // bracketed user item actually redirects the next question. Verified
+      // directly against the socket.
       upstream?.send(
         JSON.stringify({
           type: 'conversation.item.create',
-          item: { type: 'message', role: 'system', content: [{ type: 'input_text', text }] },
+          item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] },
         }),
       );
     };

@@ -505,3 +505,52 @@ blind and the product's signature catch stops working.
 `usage` on `response.done` is `{}`. **The realtime API reports no token counts.** Voice cost is
 dashboard-only; there is no programmatic path. Worth stating as a finding rather than an open
 question.
+
+---
+
+## Slide: the demo runs itself
+
+`npm run duo` — or the **Auto demo** button. An AI founder pitches the AI investor. Two
+`grok-voice-latest` sessions, different voices, audio piped between them. Out comes a markdown
+script and a .wav.
+
+**10 turns · 123s of audio · 44s wall clock · 9 claims captured · 3 contradictions caught.**
+
+Real excerpt, unedited:
+
+> **Bill:** *"I've read the deck. Slide five shows eight logos labeled our customers, but the
+> footnote mentions pilots and design partners. Slide eight says eight paying today. Are those
+> the same eight?"*
+>
+> **Maya:** *"Of those, four are actually paying — four thousand a month each. The other eight
+> are unpaid design partners. Slide eight's eight paying was a mistake on our end."*
+>
+> *[ledger fires: the same number (8) described as both customers paying and design partners]*
+>
+> **Bill:** *"40% growth on four is two more. Give me the absolute numbers month by month
+> instead of the percentage."*
+
+That last line is the **ledger steering the conversation** — a contradiction caught in
+deterministic code, injected into a live voice session, and spoken.
+
+### Why the founder is good at their job
+
+A strawman founder makes a boring demo *and* a useless test — the investor catches everything on
+turn one and there's no arc. Maya knows her numbers and concedes cleanly when pressed. The first
+version was *too* honest: she volunteered the four/eight split unprompted, the ledger never
+fired, and the demo had no money moment. Tightening her to lead with the flattering framing took
+contradictions from **zero to four**.
+
+**Tuning the adversary is part of building the eval.**
+
+### Three bugs, all found by running it
+
+1. Founder too honest → no contradictions to catch
+2. `revenue per paying customer` normalised to a customer *count* — $4,000 compared against 4
+   customers
+3. A turn spent entirely on silent tool calls produced no speech, and the other agent timed out
+   waiting
+
+Plus one thing learned by testing rather than assuming: `role: "system"` items are *accepted*
+but merely acknowledged (*"Understood. What's the play?"*). `role: "user"` with a bracketed
+direction actually redirects. Not documented anywhere.

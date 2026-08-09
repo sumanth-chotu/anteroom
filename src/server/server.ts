@@ -32,6 +32,7 @@ import { computePostureDelta, type PostureDeltaResult } from '../preread/delta.t
 import type { PreReadMemo } from '../preread/types.ts';
 import { profileView, sessionView, snapshotUsage, type UsageSnapshot } from './view.ts';
 import { attachVoiceRelay } from '../voice/relay.ts';
+import { attachDuoRelay } from '../voice/duo-relay.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env['PORT'] ?? 4317);
@@ -298,6 +299,7 @@ const server = createServer(async (req, res) => {
 // host, which is the same reason this is a plain Node server rather than
 // Next.js on serverless (PLAN.md §2.3).
 attachVoiceRelay(server, '/voice');
+attachDuoRelay(server, '/duo');
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`\n  \x1b[1mRadar\x1b[0m testing UI  \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
