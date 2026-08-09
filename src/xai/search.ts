@@ -96,10 +96,25 @@ export async function search(prompt: string, options: SearchOptions = {}): Promi
   const raw = (await response.json()) as RawResponse;
   if (raw.error) throw new Error(`x_search error: ${JSON.stringify(raw.error).slice(0, 300)}`);
 
-  const message = raw.output?.find((item) => item.type === 'message');
-  const part = message?.content?.find((c) => c.type === 'output_text');
+  // EVERY message item, not the first one.
+  //
+  // An agentic search interleaves messages with tool calls and emits a running
+  // commentary: "I'll search for X" → search → "Now let me check Y" → search →
+  // … → the actual answer. `output.find(type === 'message')` returns the FIRST
+  // of those, which is a 72-character preamble carrying no annotations, and
+  // every citation plus the entire answer is discarded.
+  //
+  // It failed silently and looked like thin source material: a dossier run made
+  // 63 searches, spent $11, and reported "0 sources · publicFootprint: thin".
+  // The category brief was reading preambles too — one search step returns a
+  // single message, so it only surfaced once the model started chaining them.
+  const parts = (raw.output ?? [])
+    .filter((item) => item.type === 'message')
+    .flatMap((message) => message.content ?? [])
+    .filter((content) => content.type === 'output_text');
 
-  const citations: Citation[] = (part?.annotations ?? [])
+  const citations: Citation[] = parts
+    .flatMap((part) => part.annotations ?? [])
     .filter((a) => a.type === 'url_citation' && a.url)
     .map((a) => {
       const citation: Citation = { url: a.url! };
@@ -116,8 +131,16 @@ export async function search(prompt: string, options: SearchOptions = {}): Promi
   };
   recordUsage(options.tag ?? 'search', config.xai.reasoning, { ...usage, reasoningTokens: 0 });
 
+  // Joined rather than last-only: the model often reports findings incrementally
+  // across several messages, so the final one alone is a conclusion without its
+  // evidence.
+  const text = parts
+    .map((part) => part.text ?? '')
+    .filter((chunk) => chunk.trim().length > 0)
+    .join('\n\n');
+
   return {
-    text: part?.text ?? '',
+    text,
     citations,
     toolCalls: raw.usage?.num_server_side_tools_used ?? 0,
     usage,
