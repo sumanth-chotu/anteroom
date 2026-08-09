@@ -120,7 +120,8 @@ a real meeting overconfident. We treat it as a correctness bug, not a tone prefe
 
 - [ ] Voice round-trip latency, p50 / p95
 - [ ] Pre-read wall-clock for a 20-slide deck
-- [ ] Cost per session (text/vision) — estimated ~$1–1.50
+- [x] **Cost per text session: ~$0.07** (34 calls, 32.7k in / 1.7k out, 37% cache hit)
+- [ ] Cost per session with vision/pre-read — estimated ~$1–1.50
 - [ ] Cost per category brief refresh — estimated ~$7
 - [ ] Eval: contradiction detection rate on adversarial founders
 - [ ] Eval: generic-question rate (target <20%)
@@ -148,3 +149,44 @@ a real meeting overconfident. We treat it as a correctness bug, not a tone prefe
 
 - **2026-08-08** — Dev machine had no Node runtime at all. Minor, but a real reminder that
   "check the toolchain before assuming the stack runs" applies even on a developer laptop.
+
+### 2026-08-08 — First working session. Transcript excerpts (real output, unedited)
+
+Adversarial founder: fraud-detection startup, planted contradiction — *12 design partners*
+early, *12 paying customers* later.
+
+**The satisfaction gate escalating on its own.** Nothing prompts it to count dodges; the
+follow-up counter feeds back into the directive and this emerges:
+
+> *"You're dodging. Twice now I've asked what changed in the last twelve months — answer that,
+> not who you sell to."*
+> *"That's the third dodge. Name the specific model, API, or cost drop after 2022…"*
+> *"Fourth dodge. Name the model or API and the per-transaction inference cost in 2022 versus
+> today — actual numbers."*
+
+**The money shot — ledger catches the planted conflation live:**
+
+> *"You've called the same 12 both design partners and paying customers. How many of them
+> actually pay you?"*
+
+**Small-base growth, resolved to absolutes automatically:**
+
+> *"40% on 12 is five customers. Give me absolute numbers month by month, not the percentage."*
+
+**Graceful abandonment** (added after the first run showed it pressing forever):
+
+> *"You never gave me the three numbers on paying customers, so I'm moving on."*
+
+**Scorecard on that founder:** non-answer rate 55%, hand-wave rate 45%, 2 contradictions caught,
+12 claims captured. No praise offered anywhere in the session.
+
+### Slide idea: "Three bugs only a live run could find"
+
+Good material — all three are quality bugs unit tests would have passed:
+
+1. **False contradiction** from a catch-all metric bucket. Lesson: *a false positive is worse
+   than a false negative* — it discredits every other finding.
+2. **"Asked" reported as "covered"** — told the founder they'd handled a topic they dodged.
+   Precisely the miscalibration the product exists to prevent.
+3. **Follow-up loop never let go** — burned a whole session on one topic. The fix produced the
+   best line in the transcript.

@@ -28,8 +28,25 @@ const IMPLAUSIBLE_MONTHLY_ACV = 50_000;
 /** Claims below this confidence never trigger a finding — too noisy. */
 const MIN_CONFIDENCE = 0.6;
 
+/**
+ * Metrics that must never be cross-compared.
+ *
+ * `other` is a catch-all bucket, so two claims land in it for entirely
+ * unrelated reasons — "six years at Stripe" and "cheap enough about a year ago"
+ * both normalize to `other`, and comparing them yields a nonsense contradiction.
+ *
+ * Caught in the first end-to-end run. A false contradiction is worse than a
+ * missed one: it destroys the founder's trust in every other finding, and the
+ * whole product rests on those findings being believable.
+ */
+const NON_COMPARABLE: readonly MetricKey[] = ['other'] as const;
+
 function confident(claims: Claim[]): Claim[] {
   return claims.filter((c) => c.confidence >= MIN_CONFIDENCE);
+}
+
+function comparable(claims: Claim[]): Claim[] {
+  return confident(claims).filter((c) => !NON_COMPARABLE.includes(c.metric));
 }
 
 function numeric(claims: Claim[], metric: MetricKey): Claim[] {
@@ -53,7 +70,7 @@ export function directContradictions(ledger: Ledger): Finding[] {
   const findings: Finding[] = [];
   const groups = new Map<string, Claim[]>();
 
-  for (const claim of confident(ledger.claims)) {
+  for (const claim of comparable(ledger.claims)) {
     if (claim.value === null) continue;
     const key = `${claim.metric}::${claim.period ?? 'unspecified'}`;
     groups.set(key, [...(groups.get(key) ?? []), claim]);

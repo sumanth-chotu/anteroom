@@ -111,3 +111,61 @@ decoding is not a guarantee, and a silently-wrong shape downstream is worse than
   `isPaying: false` from *"12 design partners, none of them pay us yet."*
 
 **Next:** Investor brain — archetypes, seed spine, question engine, satisfaction gate.
+
+---
+
+## 2026-08-08 — Phase 0 investor brain running end to end
+
+**Phase:** 0 · **Commit:** pending
+
+**What:** The full text loop works — `ask → answer → extract claims → judge → select next move`.
+
+- `investor/spine.ts` — eight seed topics, each with intent + satisfaction criteria
+- `investor/archetypes.ts` — three seed archetypes over a shared base persona
+- `investor/satisfaction.ts` — the satisfaction gate
+- `investor/engine.ts` — layered question selection (contradiction → follow-up → spine)
+- `ledger/extract.ts` — claim extraction normalized onto the canonical vocabulary
+- `session/session.ts` — orchestrator + deterministic metrics
+- `cli/pitch.ts`, `cli/input.ts` — interactive and scripted harness
+
+**Why:** Question *selection* is deterministic and pure; only *phrasing* costs a model call.
+That keeps the reasoning auditable, makes the engine unit-testable without mocking a model,
+and means a bad question is traceable to either a bad layer choice or a bad prompt — never a
+murky combination.
+
+The base persona's most important rule is **do not coach**. A real investor doesn't stop
+mid-pitch to explain how you should have answered, and an AI that does destroys the pressure
+the founder came to practise under. All coaching goes in the post-session report where it can
+be evidence-backed.
+
+`cli/input.ts` exists because readline throws `ERR_USE_AFTER_CLOSE` when stdin is a pipe — the
+stream drains to EOF while we're awaiting a model call. Rather than work around it, scripted
+input became a first-class mode, which is what the adversarial-founder eval suite needs anyway.
+
+**Learned — three bugs the first live run exposed, none of which unit tests would have caught:**
+
+1. **False contradiction from the `other` bucket.** `other` is a catch-all, so "six years at
+   Stripe" and "cheap enough about a year ago" both landed there and got compared: *"Stated
+   other as 6 and 1 for the same period."* Fixed with a `NON_COMPARABLE` exclusion. Worth
+   emphasising: **a false contradiction is worse than a missed one** — it discredits every
+   other finding, and the product rests on findings being believable.
+
+2. **Coverage counted "asked" as "covered".** The debrief showed ✓ on topics the founder had
+   completely dodged — telling them they'd handled something they escaped, which is the exact
+   miscalibration this product exists to prevent. Now three distinct states: satisfied,
+   dodged, unasked.
+
+3. **The follow-up loop never let go.** The skeptic burned four turns on one topic and the
+   founder got no coverage. Now it abandons gracefully *and says so*, which turned out to
+   produce the best line of the session: *"You never gave me the three numbers on paying
+   customers, so I'm moving on."*
+
+**Also learned:** the satisfaction gate is genuinely strict without being prompted to escalate —
+it produced "You're dodging. Twice now…" → "That's the third dodge." → "Fourth dodge." on its
+own, purely from the follow-up count being fed back in. Zero sycophancy across an 11-answer
+evasive pitch.
+
+**Measured:** 34 model calls per ~11-turn session · 32,674 prompt tokens (12,032 cached, 37%) ·
+1,686 completion. Roughly **$0.07/session** at grok-4.5 rates.
+
+**Next:** Adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).

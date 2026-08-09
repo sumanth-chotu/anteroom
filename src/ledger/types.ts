@@ -16,43 +16,46 @@
  * "logos" would never collide. Normalizing at extraction time is what makes the
  * deterministic checks in `checks.ts` possible.
  */
-export type MetricKey =
+export const METRIC_KEYS = [
   // Revenue
-  | 'mrr'
-  | 'arr'
-  | 'revenue_total'
+  'mrr',
+  'arr',
+  'revenue_total',
   // Customer counts — deliberately distinct; conflating them is the #1 seed tell
-  | 'customers_paying'
-  | 'customers_total'
-  | 'design_partners'
-  | 'pilots'
-  | 'lois'
+  'customers_paying',
+  'customers_total',
+  'design_partners',
+  'pilots',
+  'lois',
   // Soft traction — easy to inflate, rarely evidence of demand
-  | 'waitlist'
-  | 'signups'
-  | 'active_users'
-  | 'downloads'
+  'waitlist',
+  'signups',
+  'active_users',
+  'downloads',
   // Growth
-  | 'growth_rate_wow'
-  | 'growth_rate_mom'
-  | 'retention_rate'
-  | 'churn_rate'
+  'growth_rate_wow',
+  'growth_rate_mom',
+  'retention_rate',
+  'churn_rate',
   // Money
-  | 'burn_monthly'
-  | 'runway_months'
-  | 'raise_amount'
-  | 'valuation'
+  'burn_monthly',
+  'runway_months',
+  'raise_amount',
+  'valuation',
   // Company
-  | 'headcount'
-  | 'founded_date'
-  | 'launch_date'
-  | 'months_working_on_it'
+  'headcount',
+  'founded_date',
+  'launch_date',
+  'months_working_on_it',
   // Market
-  | 'tam'
-  | 'sam'
-  | 'som'
-  | 'price_point'
-  | 'other';
+  'tam',
+  'sam',
+  'som',
+  'price_point',
+  'other',
+] as const;
+
+export type MetricKey = (typeof METRIC_KEYS)[number];
 
 /** Metrics that represent a count of customers at differing levels of commitment. */
 export const COMMITMENT_LADDER: readonly MetricKey[] = [
