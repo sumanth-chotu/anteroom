@@ -12,6 +12,7 @@ import { sessionMetrics, type SessionState } from '../session/session.ts';
 import { usageSummary, type Usage } from '../xai/client.ts';
 import { SEED_SPINE } from '../investor/spine.ts';
 import type { InvestorProfile } from '../investor/profiles.ts';
+import { DISCLAIMER, avatarDataUri, personaFor } from '../investor/persona.ts';
 
 export interface UsageSnapshot {
   calls: number;
@@ -56,9 +57,23 @@ export function diffUsage(start: UsageSnapshot, now: UsageSnapshot): UsageSnapsh
 }
 
 export function profileView(p: InvestorProfile) {
+  const persona = personaFor(p.id);
   return {
     id: p.id,
     name: p.name,
+    persona: persona
+      ? {
+          fullName: persona.fullName,
+          shortName: persona.shortName,
+          title: persona.title,
+          firm: persona.firm,
+          location: persona.location,
+          bio: persona.bio,
+          fictional: persona.fictional ?? false,
+          avatar: persona.photoUrl ?? avatarDataUri(persona.avatar, 96),
+          disclaimer: persona.fictional ? 'Fictional character.' : DISCLAIMER,
+        }
+      : null,
     kind: p.kind,
     blurb: p.blurb,
     dials: {

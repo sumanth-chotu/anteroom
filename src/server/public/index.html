@@ -107,6 +107,16 @@
   .kv .v { color: var(--text); }
   .kv .v.bad { color: var(--red); } .kv .v.warn { color: var(--amber); } .kv .v.good { color: var(--green); }
 
+  .who-card { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+  .who-card img { width: 52px; height: 52px; border-radius: 50%; flex: none; border: 1px solid var(--line); }
+  .who-card .nm { font-weight: 650; font-size: 15px; line-height: 1.25; }
+  .who-card .rl { font-size: 11.5px; color: var(--dim); line-height: 1.4; margin-top: 2px; }
+  .disclaimer {
+    font-size: 10.5px; line-height: 1.45; color: var(--faint);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 5px; padding: 6px 8px; margin-top: 10px;
+  }
+  .turn .face { width: 22px; height: 22px; border-radius: 50%; vertical-align: middle; }
   .profile-kind {
     display: inline-block; font: 600 9px/1 var(--mono); letter-spacing: .1em;
     text-transform: uppercase; padding: 3px 6px; border-radius: 4px; margin-bottom: 8px;
@@ -203,7 +213,7 @@ for (const kind of ['synthetic', 'derived', 'character']) {
   for (const p of profiles.filter((x) => x.kind === kind)) {
     const opt = document.createElement('option');
     opt.value = p.id;
-    opt.textContent = p.name;
+    opt.textContent = p.persona ? `${p.persona.fullName} — ${p.persona.firm}` : p.name;
     group.appendChild(opt);
   }
   $('profile').appendChild(group);
@@ -294,10 +304,14 @@ function render(view) {
 }
 
 function renderConversation(view) {
+  const who = view.profile.persona;
   const html = view.turns.map((t) => {
     if (t.role === 'investor') {
+      const label = who
+        ? `<img class="face" src="${who.avatar}" alt=""> ${esc(who.shortName)}`
+        : 'Investor';
       return `<div class="turn investor">
-        <div class="who">Investor ${t.layer ? `<span class="tag ${t.layer}">${t.layer.replace('_', ' ')}</span>` : ''}</div>
+        <div class="who">${label} ${t.layer ? `<span class="tag ${t.layer}">${t.layer.replace('_', ' ')}</span>` : ''}</div>
         <div class="body">${esc(t.text)}</div>
       </div>`;
     }
@@ -343,16 +357,28 @@ function renderPanel(view) {
 
   $('panel').innerHTML = `
     <section>
-      <span class="profile-kind ${p.kind}">${p.kind}</span>
-      <div style="font-weight:600;margin-bottom:3px">${esc(p.name)}</div>
-      <div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(p.blurb)}</div>
+      ${p.persona ? `
+        <div class="who-card">
+          <img src="${p.persona.avatar}" alt="">
+          <div>
+            <div class="nm">${esc(p.persona.fullName)}</div>
+            <div class="rl">${esc(p.persona.title)}, ${esc(p.persona.firm)}<br>${esc(p.persona.location)}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(p.persona.bio)}</div>
+        <div style="font-size:12px;color:var(--faint);line-height:1.5;margin-top:6px">${esc(p.blurb)}</div>
+      ` : `
+        <span class="profile-kind ${p.kind}">${p.kind}</span>
+        <div style="font-weight:600;margin-bottom:3px">${esc(p.name)}</div>
+        <div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(p.blurb)}</div>
+      `}
       <div style="margin-top:12px">
         ${dial('warmth', p.dials.warmth)}
         ${dial('derailment', p.dials.derailment)}
         ${dial('self-regard', p.dials.selfRegard)}
         ${dial('follow-ups', p.dials.followUpDepth, 4)}
       </div>
-      ${p.provenance ? `<div class="prov">${esc(p.provenance.disclaimer)}</div>` : ''}
+      ${p.persona ? `<div class="disclaimer">${esc(p.persona.disclaimer)}</div>` : ''}
     </section>
 
     <section class="spine">

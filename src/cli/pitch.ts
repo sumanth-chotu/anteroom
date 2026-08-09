@@ -24,6 +24,7 @@ import {
 import { runChecks } from '../ledger/checks.ts';
 import { usageSummary } from '../xai/client.ts';
 import { DEFAULT_PROFILE_ID, PROFILES, getProfile, isChaotic } from '../investor/profiles.ts';
+import { DISCLAIMER, personaFor } from '../investor/persona.ts';
 
 const C = {
   dim: (s: string) => `\x1b[2m${s}\x1b[0m`,
@@ -61,7 +62,12 @@ if (args.includes('--list')) {
     console.log(`  \x1b[2m${KIND_LABEL[kind]}\x1b[0m`);
     for (const p of PROFILES.filter((x) => x.kind === kind)) {
       const alias = Object.entries(ALIASES).find(([, id]) => id === p.id)?.[0] ?? p.id;
-      console.log(`    \x1b[1m${alias.padEnd(13)}\x1b[0m ${p.name} \x1b[2m— ${p.blurb}\x1b[0m`);
+      const who = personaFor(p.id);
+      console.log(
+        `    \x1b[1m${alias.padEnd(13)}\x1b[0m ${who ? who.fullName : p.name}` +
+          (who ? ` \x1b[2m· ${who.title}, ${who.firm}\x1b[0m` : ''),
+      );
+      console.log(`    ${' '.repeat(13)} \x1b[2m${p.blurb}\x1b[0m`);
     }
     console.log();
   }
@@ -89,8 +95,14 @@ function wrap(text: string, width = 76, indent = '  '): string {
 }
 
 console.log(`\n${C.bold('RADAR')} ${C.dim('· seed pitch practice · phase 0 text harness')}`);
-console.log(`${C.dim('Investor:')} ${C.bold(profile.name)} — ${C.dim(profile.blurb)}`);
-if (profile.provenance) console.log(C.grey(`  ${profile.provenance.disclaimer}`));
+const who = personaFor(profile.id);
+if (who) {
+  console.log(`${C.dim('Investor:')} ${C.bold(who.fullName)} ${C.dim(`— ${who.title}, ${who.firm}`)}`);
+  console.log(C.grey(`  ${who.bio}`));
+  console.log(C.grey(`  ${who.fictional ? 'Fictional character.' : DISCLAIMER}`));
+} else {
+  console.log(`${C.dim('Investor:')} ${C.bold(profile.name)} — ${C.dim(profile.blurb)}`);
+}
 console.log(C.dim(`Type your answers. "quit" to end early and see the debrief.\n`));
 
 const input = await openInput();

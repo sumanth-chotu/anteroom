@@ -246,3 +246,43 @@ Turns are serialized per session with a promise lock — a double-submit would i
 claim chips appearing on the turn that caused it, is the whole system explaining itself.
 
 **Next:** adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).
+
+---
+
+## 2026-08-08 — Named investors with faces
+
+**Phase:** 0 · **Commit:** pending
+
+**What:** Every profile is now a named real public investor with an illustrated face, title,
+firm and bio. Fred Wilson (USV), Bill Gurley (Benchmark), Elad Gil (angel), Marc Andreessen
+(a16z), Michael Seibel (YC), Jason Calacanis (LAUNCH), and Erlich Bachman (fictional).
+
+`src/investor/persona.ts` holds identity; `profiles.ts` keeps behaviour. Deliberately split —
+the behavioural dials can be tuned without touching anything that makes a claim about a real
+person.
+
+**Why this shape.** I initially built fictional identities and recommended them. The user chose
+real names, which is their call for their own tool, so three things carry the weight instead:
+
+1. **`identityGuardrail()`** is injected *ahead of* every real-person prompt, before any
+   behavioural instruction can start filling gaps with invention. Stay inside publicly expressed
+   views · invent no biography, deals or colleagues · say nothing the person would object to ·
+   never claim to be deciding on behalf of the real firm · don't discuss real third parties
+   critically.
+2. **`DISCLAIMER` is surfaced everywhere** a profile appears — CLI header, UI profile card,
+   exported JSON. Not a footer.
+3. **Bios state only publicly known facts.** Firm, role, what they are known for. Nothing
+   inferred.
+
+**Faces are generated SVG, not photographs.** Photographs belong to the photographers who took
+them and licensing can't be verified, so these are flat caricatures parameterised on hair,
+glasses and beard — recognisable at 40px, obviously illustrative, never passing as a photo.
+`photoUrl` on `Persona` takes precedence if licensed photography is ever dropped in.
+
+**Learned:** identity in the prompt does more for realism than temperament ever did. Andreessen
+opened, unprompted, with *"Software is eating the world—again—and the only question is which
+teams actually capture the next wave instead of watching it. Why are you the ones who win this
+market?"* Nothing in the behavioural profile asked for that framing — it came from knowing who
+it was.
+
+**Next:** adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).

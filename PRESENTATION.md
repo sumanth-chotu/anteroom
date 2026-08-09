@@ -276,3 +276,41 @@ Four messages from cold start to the money shot, with the panel showing exactly 
 Next.js. Phase 2's WebSocket voice relay needs a long-lived process that Vercel serverless
 cannot host — so the testing UI is already running on the infrastructure the voice loop will
 need.
+
+---
+
+## Slide: the cast
+
+Seven named investors, each with a face, a firm and a documented interviewing style.
+
+| Archetype | Investor | Kills you on |
+|---|---|---|
+| Warm generalist | **Fred Wilson**, USV | Founder-market fit, why-now |
+| Cold skeptic | **Bill Gurley**, Benchmark | Unit economics, inflated numbers |
+| Technical | **Elad Gil**, angel | The moat, "we use AI" hand-waving |
+| Thesis-driven | **Marc Andreessen**, a16z | "Why isn't this ten times bigger?" |
+| Rapid-fire operator | **Michael Seibel**, YC | Abstraction, no user contact |
+| Solo / online | **Jason Calacanis**, LAUNCH | Distribution, founder brand |
+| Chaos | **Erlich Bachman** *(fictional)* | Whether you can hold the room |
+
+Andreessen's unprompted opening line, verbatim:
+
+> *"Software is eating the world—again—and the only question is which teams actually capture the
+> next wave instead of watching it. Why are you the ones who win this market?"*
+
+Nothing in the behavioural profile asked for that framing. It came from the model knowing who it
+was — **identity in the prompt did more for realism than temperament ever did.**
+
+### Have this answer ready — someone will ask about the real names
+
+Three concrete safeguards, worth naming on the slide because they show judgement:
+
+1. **Accuracy guardrail injected ahead of every prompt** — stay inside publicly expressed views,
+   invent no biography or deals, say nothing the person would object to, never claim to decide
+   on behalf of the real firm.
+2. **Disclaimer surfaced everywhere** the profile appears — CLI, UI card, exported session JSON.
+   Not buried in a footer.
+3. **Faces are generated SVG caricatures, never photographs.** Photos belong to the
+   photographers who took them. A `photoUrl` field exists if licensed imagery is ever obtained.
+
+Bios state only publicly known facts — firm, role, what they're known for.

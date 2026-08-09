@@ -13,18 +13,19 @@
  *                never a named individual — see PROVENANCE below.
  *   character  — deliberately unserious. Trains a different skill entirely.
  *
- * ── PROVENANCE AND NAMING ───────────────────────────────────────────────────
+ * ── NAMING ──────────────────────────────────────────────────────────────────
  *
- * Derived profiles model an observable interaction *style*, not a person. We do
- * not put words in a named real person's mouth: a simulation is a caricature,
- * not a prediction, and attributing fabricated quotes to a real investor is both
- * inaccurate and a publicity-rights problem the moment it ships.
+ * Each profile is presented as a named real public investor — see `persona.ts`
+ * for the cast, the accuracy guardrail injected into every prompt, and the
+ * disclaimer surfaced wherever a profile appears.
  *
- * So profiles are named for the style ("The Thesis Guy"), carry a `provenance`
- * block recording what public material shaped them, and never assert identity.
- * The system would support named real people; that is a launch decision, not an
- * engineering one, and it should be made deliberately rather than by default.
+ * The `blurb`/`persona` text here describes the BEHAVIOUR. The identity, bio and
+ * public-style summary live in `persona.ts` and are prepended at prompt build
+ * time. Keeping them apart means the behavioural dials can be tuned without
+ * touching anything that makes a claim about a real person.
  */
+
+import { identityGuardrail, personaFor, type Persona } from './persona.ts';
 
 export type ProfileKind = 'synthetic' | 'derived' | 'character';
 
@@ -402,10 +403,29 @@ export function isChaotic(profile: InvestorProfile): boolean {
   return profile.derailment >= 0.3;
 }
 
+export function getPersona(profileId: string): Persona | undefined {
+  return personaFor(profileId);
+}
+
 export function buildSystemPrompt(profile: InvestorProfile): string {
+  const persona = personaFor(profile.id);
+
+  // Identity first, guardrail immediately after. A model that knows its own
+  // name and fund refers to them naturally, which does more for realism than
+  // any amount of temperament description — but for a real public figure the
+  // accuracy rules have to arrive in the same breath, before any behavioural
+  // instruction can start filling gaps with invention.
+  const identity = persona
+    ? `${identityGuardrail(persona)}\n\n` +
+      `WHO YOU ARE\n\n${persona.fullName}, ${persona.title} at ${persona.firm} (${persona.location}).\n` +
+      `${persona.bio}\n\nYour public style: ${persona.publicStyle}\n\n` +
+      `Use your own name and your firm's name naturally if it comes up.\n\n`
+    : '';
+
   const quirks =
     profile.quirks.length > 0
       ? `\n\nYOUR SPECIFIC HABITS\n\n${profile.quirks.map((q) => `- ${q}`).join('\n')}`
       : '';
-  return `${BASE_PERSONA}\n\nYOUR SPECIFIC CHARACTER\n\n${profile.persona}${quirks}`;
+
+  return `${identity}${BASE_PERSONA}\n\nYOUR SPECIFIC CHARACTER\n\n${profile.persona}${quirks}`;
 }
