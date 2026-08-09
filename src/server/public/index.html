@@ -5,22 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anteroom — testing UI</title>
 <style>
+  /*
+   * Palette, in the house style of x.ai: true black, hairline rules, and type
+   * doing the work that colour used to do.
+   *
+   * The previous theme was a conventional dark-blue dev tool — rounded panels,
+   * a blue accent, a different colour per state. That reads as a dashboard. This
+   * one keeps colour for semantics ONLY (a contradiction is red because it is
+   * bad, not because red looked nice), and everything structural is greyscale.
+   *
+   * Every variable name is unchanged, so ~900 lines of existing rules restyle
+   * without being touched.
+   */
   :root {
-    --bg: #0d0f12;
-    --panel: #14171c;
-    --panel-2: #1a1e24;
-    --line: #262b33;
-    --text: #e4e7ec;
-    --dim: #8b94a3;
-    --faint: #5a6373;
-    --accent: #6ea8fe;
-    --investor: #7dd3fc;
-    --founder: #e4e7ec;
-    --red: #f87171;
-    --amber: #fbbf24;
-    --green: #4ade80;
-    --purple: #c084fc;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    --bg: #000000;
+    --panel: #060606;
+    --panel-2: #0e0e0e;
+    --line: #1f1f1f;
+    --text: #f5f5f5;
+    --dim: #8a8a8a;
+    --faint: #545454;
+    /* Near-white rather than blue: on true black, white IS the accent. */
+    --accent: #ffffff;
+    --investor: #ffffff;
+    --founder: #b4b4b4;
+    --red: #ff5c48;
+    --amber: #f5a524;
+    --green: #3fd07f;
+    --purple: #a78bfa;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --radius: 3px;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
@@ -124,6 +138,7 @@
   .profile-kind.synthetic { color: var(--accent);  background: #12203a; }
   .profile-kind.derived   { color: var(--green);   background: #122b1e; }
   .profile-kind.character { color: var(--purple);  background: #251a38; }
+  .profile-kind.corpus    { color: var(--text);    background: #1a1a1a; }
   .prov { font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 8px; font-style: italic; }
 
   .dial { display: grid; grid-template-columns: 74px 1fr 30px; gap: 8px; align-items: center; margin-bottom: 5px; }
@@ -223,6 +238,124 @@
   .obj .src a:hover { color: var(--accent); }
   .err { color: var(--red); font-size: 12px; padding: 8px 26px; }
   .spinner { display: inline-block; width: 9px; color: var(--faint); font-family: var(--mono); }
+  /* ─────────────────────────────────────────────────────────────────────────
+   * x.ai surface treatment
+   *
+   * Appended as overrides rather than edited in place: the rules above are
+   * shape-correct and only their finish is wrong, so a small block at the end
+   * restyles everything without a 900-line diff to review.
+   * ───────────────────────────────────────────────────────────────────────── */
+
+  body {
+    /* Tight, geometric, slightly negative tracking — the grotesk look. */
+    font-family: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Near-square corners everywhere. Rounded chrome is what made it read as a
+     dashboard rather than a product surface. */
+  select, button, textarea, .chip, .disclaimer, .profile-kind, .posture,
+  .tag, .who-card img, .nocase { border-radius: var(--radius) !important; }
+
+  header {
+    padding: 0 22px; height: 52px; background: #000;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { letter-spacing: -0.02em; font-size: 15px; font-weight: 560; text-transform: none; }
+  .brand span { letter-spacing: 0; font-size: 12px; color: var(--faint); }
+
+  button, select {
+    background: transparent; border-color: var(--line);
+    padding: 6px 12px; font-size: 12.5px; letter-spacing: -0.005em;
+    transition: border-color .12s, background .12s;
+  }
+  button:hover:not(:disabled) { border-color: #3d3d3d; background: var(--panel-2); }
+  button.primary { background: #fff; color: #000; border-color: #fff; }
+  button.primary:hover:not(:disabled) { background: #d4d4d4; border-color: #d4d4d4; }
+
+  /* Labels as small caps monospace — the one place tracking goes positive. */
+  h2, .hint, .kv, .vstatus {
+    letter-spacing: .1em;
+  }
+  h2 { color: var(--faint); font-size: 9.5px; }
+
+  .turn.investor .body { font-size: 15px; line-height: 1.5; letter-spacing: -0.014em; }
+  .turn.founder .body { background: var(--panel-2); border-color: var(--line); color: var(--founder); }
+
+  /* Layer tags: greyscale by default. Colour is reserved for the two layers
+     where it carries meaning — a contradiction caught, and a question that came
+     from the investor's own documented position. */
+  .tag { border-color: var(--line); color: var(--faint); font-size: 8.5px; }
+  .tag.spine, .tag.wrap_up, .tag.planned_probe, .tag.follow_up { color: var(--faint); }
+  .tag.contradiction { color: var(--red); border-color: #4a1a14; }
+  .tag.conviction { color: #000; background: #fff; border-color: #fff; }
+
+  .chip { background: transparent; font-size: 9.5px; }
+
+  section { padding: 16px 20px; }
+  aside { background: #000; border-left: 1px solid var(--line); }
+  .conv { border-right: 1px solid var(--line); }
+  .composer, .voicebar { background: #000; }
+  textarea { background: var(--panel-2); }
+
+  .profile-kind {
+    background: transparent !important; border: 1px solid var(--line);
+    color: var(--dim) !important; font-size: 8.5px;
+  }
+  .disclaimer { background: transparent; border-color: var(--line); }
+  .bar > i { background: #fff; }
+  .who-card img { border-radius: var(--radius) !important; }
+
+  /* ── the avatar ──────────────────────────────────────────────────────────
+   * Still and loop are stacked in the same box. The video sits on top and is
+   * faded in only once it is actually playing, so a slow first frame shows the
+   * portrait instead of a black rectangle — and an investor with no generated
+   * motion simply keeps showing the still.
+   */
+  .face-box {
+    position: relative; width: 100%; aspect-ratio: 3 / 2;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; background: var(--panel-2); margin-bottom: 12px;
+  }
+  .face-box > img, .face-box > video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  .face-box > video { opacity: 0; transition: opacity .5s ease; }
+  .face-box > video.on { opacity: 1; }
+  .face-box .vlabel {
+    position: absolute; left: 8px; bottom: 7px; z-index: 2;
+    font: 500 9px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--dim); background: rgba(0,0,0,.72);
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 7px;
+  }
+  .face-box .speaking-dot {
+    position: absolute; right: 8px; bottom: 8px; z-index: 2;
+    width: 7px; height: 7px; border-radius: 50%; background: #fff;
+    opacity: 0; transition: opacity .2s;
+  }
+  .face-box.talking .speaking-dot { opacity: 1; animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
+
+  /* ── grounding: what research the session is running on ─────────────────── */
+  .ground { display: flex; flex-direction: column; gap: 5px; }
+  .ground .row {
+    display: flex; justify-content: space-between; gap: 10px;
+    font: 11px/1.7 var(--mono); letter-spacing: .04em;
+  }
+  .ground .row .k { color: var(--faint); }
+  .ground .row .v { color: var(--text); text-align: right; }
+  .ground .none { color: var(--faint); font-size: 11px; font-style: italic; }
+
+  /* The conviction a question came from, shown under the turn that used it. */
+  .from-belief {
+    margin-top: 7px; padding-left: 9px; border-left: 1px solid #3d3d3d;
+    font-size: 11.5px; line-height: 1.45; color: var(--dim);
+  }
+  .from-belief b {
+    display: block; font: 500 8.5px/1 var(--mono); letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 3px;
+  }
 </style>
 </head>
 <body>
@@ -286,8 +419,9 @@ let delta = null;
 let probeOutcomes = null;
 
 // ── profiles ────────────────────────────────────────────────────────────────
-const KIND_ORDER = { synthetic: 0, derived: 1, character: 2 };
+const KIND_ORDER = { corpus: 0, synthetic: 1, derived: 2, character: 3 };
 const KIND_LABEL = {
+  corpus: 'Built from their own published work',
   synthetic: 'Composite archetypes',
   derived: 'Derived from public behaviour',
   character: 'Unserious — trains room control',
@@ -295,7 +429,7 @@ const KIND_LABEL = {
 
 const { profiles } = await (await fetch('/api/profiles')).json();
 profiles.sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
-for (const kind of ['synthetic', 'derived', 'character']) {
+for (const kind of ['corpus', 'synthetic', 'derived', 'character']) {
   const group = document.createElement('optgroup');
   group.label = KIND_LABEL[kind];
   for (const p of profiles.filter((x) => x.kind === kind)) {
@@ -521,9 +655,23 @@ $('voice').onclick = async () => {
           break;
         case 'speech':
           setVoiceStatus(n.active ? 'you are speaking' : 'listening', n.active ? 'listening' : '');
+          if (n.active) setSpeaking(false);
+          break;
+        case 'conviction':
+          // A belief the founder just walked into. Shown live, because the whole
+          // point is that the next question is not going to be generic.
+          $('scroll').insertAdjacentHTML(
+            'beforeend',
+            `<div class="from-belief" style="margin:0 0 16px">
+               <b>they just walked into a position of his</b>${esc(n.belief)}</div>`,
+          );
+          $('scroll').scrollTop = $('scroll').scrollHeight;
           break;
         case 'speaking':
           if (n.active) setVoiceStatus('investor speaking', 'speaking');
+          // Swap the avatar to its speaking loop, so the face is moving while
+          // the voice is actually talking rather than looping idly throughout.
+          setSpeaking(!!n.active);
           break;
         case 'transcript':
           if (n.final) {
@@ -724,9 +872,19 @@ function renderConversation(view) {
       const label = who
         ? `<img class="face" src="${who.avatar}" alt=""> ${esc(who.shortName)}`
         : 'Investor';
+      // The two signals from the personality layer. `convictionBelief` is the
+      // interesting one: it shows the question came from a position this
+      // investor argued in their own writing, not from the generic checklist.
+      const belief = t.convictionBelief
+        ? `<div class="from-belief"><b>from their own position</b>${esc(t.convictionBelief)}</div>`
+        : '';
+      const reroll = t.regenerated
+        ? `<span class="chip warn" title="first attempt tripped the AI-tell detector">rerolled</span>`
+        : '';
       return `<div class="turn investor">
-        <div class="who">${label} ${t.layer ? `<span class="tag ${t.layer}">${t.layer.replace('_', ' ')}</span>` : ''}</div>
+        <div class="who">${label} ${t.layer ? `<span class="tag ${t.layer}">${t.layer.replace('_', ' ')}</span>` : ''} ${reroll}</div>
         <div class="body">${esc(t.text)}</div>
+        ${belief}
       </div>`;
     }
     const chips = [];
@@ -763,6 +921,67 @@ function dial(name, value, max = 1) {
   </div>`;
 }
 
+/**
+ * The investor's face: Grok Imagine still, with the motion loop over it.
+ *
+ * Falls back to the drawn SVG when no portrait has been generated, and to the
+ * still alone when there is no motion — so this renders something for every
+ * investor regardless of which assets exist.
+ *
+ * `setSpeaking()` swaps idle→speaking. Both videos are in the DOM and only the
+ * opacity changes: reassigning `src` would restart the download and stall for a
+ * second every time the investor started talking.
+ */
+function faceBox(p) {
+  const still = p.portrait || (p.persona && p.persona.avatar);
+  if (!still) return '';
+
+  const loops = ['idle', 'speaking']
+    .filter((kind) => p.motion && p.motion[kind])
+    .map(
+      (kind) =>
+        `<video id="loop-${kind}" src="${p.motion[kind]}" muted loop playsinline preload="auto"></video>`,
+    )
+    .join('');
+
+  const label = p.voice ? `<div class="vlabel">voice · ${esc(p.voice.id)}</div>` : '';
+  return `<div class="face-box" id="face-box">
+    <img src="${still}" alt="">
+    ${loops}
+    ${label}
+    <div class="speaking-dot"></div>
+  </div>`;
+}
+
+/**
+ * Show the right loop. Called by the voice client on speech start/stop.
+ *
+ * Safe to call when no motion exists — every lookup is guarded, so an investor
+ * with only a still just keeps showing it.
+ */
+function setSpeaking(talking) {
+  const box = $('face-box');
+  if (box) box.classList.toggle('talking', !!talking);
+
+  const idle = $('loop-idle');
+  const speaking = $('loop-speaking');
+  const wanted = talking ? speaking || idle : idle;
+
+  for (const video of [idle, speaking]) {
+    if (!video) continue;
+    if (video === wanted) {
+      video.classList.add('on');
+      // play() rejects when autoplay is blocked before any user gesture. The
+      // still underneath is a perfectly good fallback, so swallow it.
+      video.play().catch(() => {});
+    } else {
+      video.classList.remove('on');
+      video.pause();
+    }
+  }
+}
+window.setSpeaking = setSpeaking;
+
 function renderPanel(view) {
   const p = view.profile, m = view.metrics;
   const MARK = { satisfied: '✓', dodged: '✗', asking: '›', unasked: '·' };
@@ -771,9 +990,9 @@ function renderPanel(view) {
 
   $('panel').innerHTML = `
     <section>
+      ${faceBox(p)}
       ${p.persona ? `
-        <div class="who-card">
-          <img src="${p.persona.avatar}" alt="">
+        <div class="who-card" style="align-items:center">
           <div>
             <div class="nm">${esc(p.persona.fullName)}</div>
             <div class="rl">${esc(p.persona.title)}, ${esc(p.persona.firm)}<br>${esc(p.persona.location)}</div>
@@ -793,6 +1012,40 @@ function renderPanel(view) {
         ${dial('follow-ups', p.dials.followUpDepth, 4)}
       </div>
       ${p.persona ? `<div class="disclaimer">${esc(p.persona.disclaimer)}</div>` : ''}
+    </section>
+
+    <section>
+      <h2>What this persona is built from</h2>
+      <div class="ground">
+        ${
+          view.grounding && view.grounding.corpus
+            ? `<div class="row"><span class="k">corpus</span><span class="v">${view.grounding.corpus.documents} documents</span></div>
+               <div class="row"><span class="k">convictions</span><span class="v">${view.grounding.corpus.convictions} cited</span></div>
+               <div class="row"><span class="k">source</span><span class="v">${esc(view.grounding.corpus.label)}</span></div>`
+            : ''
+        }
+        ${
+          view.grounding && view.grounding.dossier
+            ? `<div class="row"><span class="k">dossier</span><span class="v">${view.grounding.dossier.pressurePoints} pressure points</span></div>
+               <div class="row"><span class="k">footprint</span><span class="v">${view.grounding.dossier.footprint}</span></div>`
+            : ''
+        }
+        ${
+          !view.grounding || (!view.grounding.corpus && !view.grounding.dossier)
+            ? `<div class="none">Hand-written profile only. Build one:
+                 <br>npm run persona -- ${esc(p.id)}</div>`
+            : ''
+        }
+        <div class="row" style="margin-top:6px">
+          <span class="k">ai tells / turn</span>
+          <span class="v ${m.tellsPerTurn > 0 ? 'warn' : 'good'}">${m.tellsPerTurn.toFixed(2)}</span>
+        </div>
+        <div class="row"><span class="k">turns rerolled</span><span class="v">${m.regeneratedTurns}</span></div>
+        <div class="row">
+          <span class="k">from convictions</span>
+          <span class="v">${m.convictionTurns}</span>
+        </div>
+      </div>
     </section>
 
     ${delta ? `

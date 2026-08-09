@@ -354,6 +354,28 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // Generated avatars. The filename pattern is strict rather than a path join:
+  // anything looser here is a directory traversal, and this server also has the
+  // xAI key in its environment.
+  const avatar = /^\/avatars\/([a-z_]+(?:-(?:idle|speaking))?\.(?:jpg|mp4))$/.exec(path);
+  if (avatar) {
+    const name = avatar[1] ?? '';
+    try {
+      const bytes = await readFile(join(HERE, '..', '..', 'fixtures', 'avatars', name));
+      res.writeHead(200, {
+        'Content-Type': name.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg',
+        'Content-Length': bytes.length,
+        // Immutable: regenerating produces a new asset via `npm run avatars`,
+        // and a video re-fetched on every loop iteration would stutter.
+        'Cache-Control': 'public, max-age=86400',
+      });
+      res.end(bytes);
+    } catch {
+      res.writeHead(404).end('no such avatar — run: npm run avatars -- all');
+    }
+    return;
+  }
+
   if (path === '/' || path === '/index.html') {
     try {
       const html = await readFile(join(HERE, 'public', 'index.html'), 'utf8');

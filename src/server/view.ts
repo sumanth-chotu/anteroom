@@ -13,6 +13,22 @@ import { usageSummary, type Usage } from '../xai/client.ts';
 import { SEED_SPINE } from '../investor/spine.ts';
 import type { InvestorProfile } from '../investor/profiles.ts';
 import { DISCLAIMER, avatarDataUri, personaFor } from '../investor/persona.ts';
+import { castingNote, voiceFor } from '../voice/voices.ts';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+/**
+ * Whether a generated asset is on disk.
+ *
+ * Synchronous, and checked per request rather than cached: `npm run avatars`
+ * writes these while the server is running, and a cached negative would mean a
+ * restart before a freshly generated portrait appeared. The view model is built
+ * a handful of times per session, so the stat calls are free.
+ */
+function hasAvatar(profileId: string, kind?: 'idle' | 'speaking'): boolean {
+  const name = kind ? `${profileId}-${kind}.mp4` : `${profileId}.jpg`;
+  return existsSync(resolve('fixtures/avatars', name));
+}
 
 export interface UsageSnapshot {
   calls: number;
@@ -76,6 +92,14 @@ export function profileView(p: InvestorProfile) {
       : null,
     kind: p.kind,
     blurb: p.blurb,
+    // Grok Imagine assets, when they have been generated. The drawn SVG in
+    // `persona.avatar` stays the fallback so the UI never shows a gap.
+    portrait: hasAvatar(p.id) ? `/avatars/${p.id}.jpg` : null,
+    motion: {
+      idle: hasAvatar(p.id, 'idle') ? `/avatars/${p.id}-idle.mp4` : null,
+      speaking: hasAvatar(p.id, 'speaking') ? `/avatars/${p.id}-speaking.mp4` : null,
+    },
+    voice: { id: voiceFor(p.id), casting: castingNote(p.id) },
     dials: {
       warmth: p.warmth,
       derailment: p.derailment,
@@ -115,6 +139,12 @@ export function sessionView(session: SessionState, usageAtStart: UsageSnapshot) 
         confidence: c.confidence,
       })),
       roomControl: t.roomControl ?? null,
+      // The personality layer, made visible. Without these on the wire the UI
+      // cannot show that a question came from the investor's own position rather
+      // than a checklist — which is the whole claim.
+      tellScore: t.tellScore ?? null,
+      regenerated: t.regenerated ?? false,
+      convictionBelief: t.convictionBelief ?? null,
     })),
     ledger: session.ledger.claims.map((c) => ({
       id: c.id,
@@ -154,7 +184,28 @@ export function sessionView(session: SessionState, usageAtStart: UsageSnapshot) 
       talkRatio: metrics.talkRatio,
       claimsCaptured: metrics.claimsCaptured,
       contradictionsFound: metrics.contradictionsFound,
+      tellsPerTurn: metrics.tellsPerTurn,
+      regeneratedTurns: metrics.regeneratedTurns,
+      convictionTurns: metrics.convictionTurns,
     },
+    /** What research this session is actually running on. */
+    grounding: session.briefing
+      ? {
+          corpus: session.briefing.corpus
+            ? {
+                label: session.briefing.corpus.corpus.label,
+                documents: session.briefing.corpus.corpus.documents,
+                convictions: session.briefing.corpus.convictions.length,
+              }
+            : null,
+          dossier: session.briefing.dossier
+            ? {
+                footprint: session.briefing.dossier.publicFootprint,
+                pressurePoints: session.briefing.dossier.pressurePoints.length,
+              }
+            : null,
+        }
+      : null,
     roomControl: metrics.chaotic
       ? {
           derails: metrics.derails,

@@ -1,0 +1,44 @@
+{
+  "seed_generalist": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-361543ed-45d7-9fb8-855f-56f7d79d0a31-d0597daf.jpeg",
+    "builtAt": "2026-08-09T04:43:31.571Z",
+    "costUsd": 0.2
+  },
+  "seed_skeptic": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-6fce2e50-38b4-91d9-b4d1-6b2b22723805-04b399a4.jpeg",
+    "builtAt": "2026-08-09T04:43:39.450Z",
+    "costUsd": 0.2
+  },
+  "technical_angel": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-50ac3117-94c8-9215-b908-b6c0b6003636-77ec74a9.jpeg",
+    "builtAt": "2026-08-09T04:43:45.524Z",
+    "costUsd": 0.2
+  },
+  "thesis_macro": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-330ccb37-786b-956d-82b5-bbc2a3dc2e47-82a34466.jpeg",
+    "builtAt": "2026-08-09T04:43:52.594Z",
+    "costUsd": 0.2
+  },
+  "accelerator_operator": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-9e5093bd-2313-93c5-9d2d-5b9a9eeca08d-38ab2f5f.jpeg",
+    "builtAt": "2026-08-09T04:43:59.485Z",
+    "costUsd": 0.2
+  },
+  "solo_capitalist": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-235774e6-c759-9b1d-88dd-d40c50fe8e0d-78f47ee9.jpeg",
+    "builtAt": "2026-08-09T04:44:06.942Z",
+    "costUsd": 0.2
+  },
+  "essayist": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-5c06bc61-0efa-9a9d-a684-367aff4d89e1-d784260a.jpeg",
+    "builtAt": "2026-08-09T04:44:13.320Z",
+    "costUsd": 10,
+    "idle": "https://vidgen.x.ai/xai-vidgen-bucket/xai-video-5aa8732a-b158-976a-bfcc-7881adc8921a.mp4",
+    "speaking": "https://vidgen.x.ai/xai-vidgen-bucket/xai-video-4dc64302-ffaa-9aeb-9477-0597165efa2d.mp4"
+  },
+  "incubator_blowhard": {
+    "still": "https://imgen.x.ai/xai-imgen/xai-tmp-imgen-abd965ff-d028-9d1b-a2f3-46c4ebe5504f-fba78783.jpeg",
+    "builtAt": "2026-08-09T04:44:19.702Z",
+    "costUsd": 0.2
+  }
+}

@@ -37,3 +37,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/settings.json
+
+# Ingested corpora — public essays, cached for analysis. Not ours to redistribute.
+.tmp/corpus/

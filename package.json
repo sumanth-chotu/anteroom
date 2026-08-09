@@ -22,7 +22,8 @@
     "brief": "node --env-file=.env --experimental-strip-types src/cli/brief.ts",
     "dossier": "node --env-file=.env --experimental-strip-types src/cli/dossier.ts",
     "persona": "node --env-file=.env --experimental-strip-types src/cli/persona.ts",
-    "rehearse": "node --env-file=.env --experimental-strip-types src/cli/rehearse.ts"
+    "rehearse": "node --env-file=.env --experimental-strip-types src/cli/rehearse.ts",
+    "avatars": "node --env-file=.env --experimental-strip-types src/cli/avatars.ts"
   },
   "dependencies": {
     "ws": "^8.21.3",
