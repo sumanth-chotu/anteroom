@@ -93,8 +93,14 @@ is no founder turn above it.
 
 ### S2 · The pre-read — 0:14–0:46
 
-**On screen:** the pre-read panel. Scroll slowly: posture badge → the case for passing →
-ranked probes. Hold on the case for passing.
+**On screen:** click `sample deck` — a plain click loads the **precomputed** memo instantly, so
+this beat has no wait in it. Scroll slowly: posture badge → the case for passing → ranked
+probes. Hold on the case for passing.
+
+> The UI labels this as precomputed and offers shift-click to re-run the full ~80s pipeline
+> live. **Leave the label in frame.** It costs nothing and it's the honest version — and a
+> five-pass vision pipeline that takes 80 seconds is a *feature* (it's off the latency path),
+> not something to hide.
 
 **VO:**
 > This is what it thought. Five vision passes over the slides, and the case for *declining*
@@ -142,7 +148,8 @@ the literature since the 1990s and still not shipping.
 
 **Screen text:** `mined from N X posts · asked as the investor's own read, never cited`
 
-> Full quotes and source URLs: `.tmp/briefs/real-time-payment-fraud-detection-for-fintechs.json`
+> Full quotes and source URLs:
+> `fixtures/briefs/real-time-payment-fraud-detection-for-fintechs.json`
 
 ---
 
@@ -237,10 +244,12 @@ happen on screen.
 
 - [ ] `npm test` and `npm run typecheck` — both green (43 tests as of this writing)
 - [ ] `npm run fixture:deck` — sample deck PDF exists
-- [ ] **Warm the pre-read.** `sample` takes ~40–80s. Run it before recording and let the memo
-      be on screen when you start, or cut away. **Never record the spinner.**
-- [ ] Confirm the cached brief is present:
-      `.tmp/briefs/real-time-payment-fraud-detection-for-fintechs.json`
+- [ ] **Plain-click the sample deck, don't shift-click.** Since `2b48cee` a plain click serves
+      the precomputed memo instantly; shift-click re-runs the full ~80s pipeline. On camera you
+      want the plain click. **Never record the spinner.**
+- [ ] Fixtures present (both committed as of `2b48cee`, so a clean checkout is fine):
+      `fixtures/prereads/planted-flaws.json` and
+      `fixtures/briefs/real-time-payment-fraud-detection-for-fintechs.json`
 - [ ] `npm run ui` running, `/voice` and `/duo` both connecting
 - [ ] Mic permission **already granted** in the browser — the permission dialog on camera is a
       retake
@@ -275,7 +284,7 @@ objection *out loud*. That would be a materially better video.
 |---|---|
 | Live voice fails on the day | **B:** `npm run duo` — two AI agents, produces a `.wav` and a markdown script. Record it once as insurance *before* the real attempt. 10 turns, 44s wall clock. |
 | Ledger doesn't fire on your phrasing | Use the exact rehearsed lines. Verified triggers: "twelve design partners" → "all twelve are paying customers." |
-| Pre-read is slow / errors live | Screen-record the memo separately and cut it in. S2 has no live interaction — nothing is lost. |
+| Pre-read is slow / errors live | Largely solved — the plain click is a committed fixture, no model call. If it still fails, screen-record the memo separately and cut it in; S2 has no live interaction, so nothing is lost. |
 | Over 3:00 in the edit | Cut in this order: (1) the one-liner insert, (2) the S4 follow-up line, (3) S2 down to posture + one probe. **Never cut into S4's core.** |
 | Network flaky | Everything except voice can be pre-recorded. Voice cannot — protect it with fallback B. |
 

@@ -752,3 +752,10 @@ The UI says which one you are getting rather than pretending it computed in zero
 **Learned:** demo assets are production assets. Anything a live demo depends on needs the same
 durability as source — and "it works on this machine right now" is exactly the failure that only
 shows up on stage.
+
+**Amended same day:** `2b48cee` (landed in parallel) closed the biggest recording risk in this
+plan — the sample deck's pre-read is now a committed fixture served instantly on a plain click,
+with shift-click preserved for re-running the ~80s pipeline live. `DEMO.md`'s S2 shot and
+pre-flight checklist updated to match; "warm the pre-read before recording" is obsolete. The
+brief and pre-read fixture paths moved from `.tmp/` to `fixtures/`, so the demo now survives a
+clean checkout.
