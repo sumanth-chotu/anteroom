@@ -30,6 +30,8 @@ import { PROFILES } from '../investor/profiles.ts';
 import { generatePreRead } from '../preread/preread.ts';
 import { computePostureDelta, type PostureDeltaResult } from '../preread/delta.ts';
 import type { PreReadMemo } from '../preread/types.ts';
+import { buildCategoryBrief } from '../category/brief.ts';
+import type { CategoryBrief } from '../category/types.ts';
 import { profileView, sessionView, snapshotUsage, type UsageSnapshot } from './view.ts';
 import { createVoiceRelay } from '../voice/relay.ts';
 import { createDuoRelay } from '../voice/duo-relay.ts';
@@ -50,6 +52,9 @@ const sessions = new Map<string, Entry>();
 
 /** Pre-reads live for the process lifetime, keyed so a session can reference one. */
 const memos = new Map<string, PreReadMemo>();
+
+/** Category briefs, keyed so a session can reference one. */
+const briefs = new Map<string, CategoryBrief>();
 
 /** Decks can be a few MB of base64. Well under this; the cap is a sanity bound. */
 const MAX_UPLOAD_BYTES = 40 * 1024 * 1024;
@@ -108,11 +113,13 @@ const routes: Array<{
       const profileId = typeof body['profileId'] === 'string' ? body['profileId'] : 'seed_skeptic';
       const memoId = typeof body['memoId'] === 'string' ? body['memoId'] : undefined;
       const memo = memoId ? memos.get(memoId) : undefined;
+      const briefId = typeof body['briefId'] === 'string' ? body['briefId'] : undefined;
+      const brief = briefId ? briefs.get(briefId) : undefined;
 
       let entry: Entry;
       try {
         entry = {
-          session: createSession(profileId, undefined, memo),
+          session: createSession(profileId, undefined, memo, brief),
           usageAtStart: snapshotUsage(),
           lock: Promise.resolve(),
         };
@@ -170,6 +177,52 @@ const routes: Array<{
         json(res, 201, { memoId, memo });
       } catch (error) {
         json(res, 400, { error: error instanceof Error ? error.message : 'pre-read failed' });
+      }
+    },
+  },
+
+  {
+    // Build a category brief from X discussion. Slow (2-3 min) — it is Loop 0,
+    // deliberately offline and cached.
+    method: 'POST',
+    pattern: /^\/api\/briefs$/,
+    async handle(req, res) {
+      const body = await readJson(req);
+      const category = typeof body['category'] === 'string' ? body['category'].trim() : '';
+      if (!category) return json(res, 400, { error: 'category required' });
+
+      const competitors =
+        typeof body['competitors'] === 'string'
+          ? body['competitors'].split(',').map((s) => s.trim()).filter(Boolean)
+          : [];
+
+      try {
+        const brief = await buildCategoryBrief({ category, competitors });
+        const briefId = `brief_${briefs.size + 1}_${Date.now()}`;
+        briefs.set(briefId, brief);
+        json(res, 201, { briefId, brief });
+      } catch (error) {
+        json(res, 400, { error: error instanceof Error ? error.message : 'brief failed' });
+      }
+    },
+  },
+
+  {
+    // A prebuilt brief, so the demo doesn't wait 3 minutes.
+    method: 'GET',
+    pattern: /^\/api\/sample-brief$/,
+    async handle(_req, res) {
+      try {
+        const raw = await readFile(
+          join(HERE, '..', '..', '.tmp', 'briefs', 'real-time-payment-fraud-detection-for-fintechs.json'),
+          'utf8',
+        );
+        const brief = JSON.parse(raw) as CategoryBrief;
+        const briefId = `brief_sample_${Date.now()}`;
+        briefs.set(briefId, brief);
+        json(res, 200, { briefId, brief });
+      } catch {
+        json(res, 404, { error: 'no sample brief — run: npm run brief -- "<category>" --save' });
       }
     },
   },

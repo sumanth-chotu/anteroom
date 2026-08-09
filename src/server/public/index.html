@@ -214,6 +214,13 @@
   }
   .uploader label:hover { border-color: var(--accent); color: var(--text); }
   .uploader .name { font: 11px/1 var(--mono); color: var(--green); }
+  #briefbtn.on { border-color: var(--green); color: var(--green); }
+  .obj { border-left: 2px solid var(--line); padding: 2px 0 2px 10px; margin-bottom: 12px; }
+  .obj .th { font-size: 12px; font-weight: 600; line-height: 1.4; }
+  .obj .q { font-size: 11px; color: var(--dim); font-style: italic; margin-top: 4px; line-height: 1.45; }
+  .obj .src { font-size: 10px; margin-top: 4px; }
+  .obj .src a { color: var(--faint); text-decoration: none; }
+  .obj .src a:hover { color: var(--accent); }
   .err { color: var(--red); font-size: 12px; padding: 8px 26px; }
   .spinner { display: inline-block; width: 9px; color: var(--faint); font-family: var(--mono); }
 </style>
@@ -226,7 +233,8 @@
   <div class="uploader">
     <label for="deck" id="decklabel">+ deck</label>
     <input type="file" id="deck" accept=".pdf,.pptx,.ppt,.png,.jpg,.jpeg" hidden>
-    <button id="sample" title="Load the planted-flaw fixture deck">sample</button>
+    <button id="sample" title="Load the planted-flaw fixture deck">sample deck</button>
+    <button id="briefbtn" title="Load a category brief mined from X">+ market</button>
     <span class="name" id="deckname"></span>
   </div>
   <select id="profile"></select>
@@ -272,6 +280,7 @@ const pct = (n) => `${Math.round((n ?? 0) * 100)}%`;
 let sessionId = null;
 let busy = false;
 let memoId = null;
+let briefId = null;
 let memo = null;
 let delta = null;
 let probeOutcomes = null;
@@ -363,6 +372,23 @@ $('deck').onchange = async (event) => {
   await runPreRead(file.name, data);
 };
 
+$('briefbtn').onclick = async () => {
+  if (busy) return;
+  setBusy(true); showError(null);
+  $('briefbtn').textContent = 'loading…';
+  try {
+    const result = await call('/api/sample-brief');
+    briefId = result.briefId;
+    $('briefbtn').textContent = `✓ ${result.brief.objectionThemes.length} objections`;
+    $('briefbtn').classList.add('on');
+  } catch (error) {
+    showError(error.message);
+    $('briefbtn').textContent = '+ market';
+  } finally {
+    setBusy(false);
+  }
+};
+
 $('sample').onclick = async () => {
   if (busy) return;
   try {
@@ -380,7 +406,7 @@ $('start').onclick = async () => {
     const view = await call('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profileId: $('profile').value, memoId }),
+      body: JSON.stringify({ profileId: $('profile').value, memoId, briefId }),
     });
     sessionId = view.id;
     delta = null; probeOutcomes = null;
@@ -772,6 +798,20 @@ function renderPanel(view) {
       ${delta.madeWorse.length ? `
         <div style="margin-top:12px"><h2 style="color:var(--red)">Made worse</h2>
         ${delta.madeWorse.map((x) => `<div class="what" style="margin-bottom:5px">− ${esc(x)}</div>`).join('')}</div>` : ''}
+    </section>` : ''}
+
+    ${view.brief ? `
+    <section>
+      <h2>What this market says (${view.brief.objectionThemes.length})</h2>
+      <div style="font-size:11px;color:var(--faint);margin-bottom:10px">
+        Mined from ${view.brief.sourceCount} X posts · ${esc(view.brief.category)}
+      </div>
+      ${view.brief.objectionThemes.slice(0, 5).map((o) => `
+        <div class="obj">
+          <div class="th">“${esc(o.theme)}”</div>
+          <div class="q">→ ${esc(o.investorQuestion)}</div>
+          ${o.quotes.slice(0, 1).map((q) => `<div class="src"><a href="${esc(q.url)}" target="_blank" rel="noopener">${esc(q.url.replace('https://x.com/', '@').split('/status')[0])} ↗</a></div>`).join('')}
+        </div>`).join('')}
     </section>` : ''}
 
     ${view.memo ? `

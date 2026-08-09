@@ -28,6 +28,7 @@ import {
 } from '../investor/engine.ts';
 import { getProfile, isChaotic, type InvestorProfile } from '../investor/profiles.ts';
 import type { PreReadMemo } from '../preread/types.ts';
+import type { CategoryBrief } from '../category/types.ts';
 import { topicById } from '../investor/spine.ts';
 
 export interface SessionTurn extends Turn {
@@ -50,6 +51,8 @@ export interface SessionState {
   profile: InvestorProfile;
   /** Present when the founder uploaded a deck before the meeting. */
   memo?: PreReadMemo;
+  /** Present when a category brief has been built for this space. */
+  brief?: CategoryBrief;
   engine: EngineState;
   ledger: Ledger;
   turns: SessionTurn[];
@@ -60,6 +63,7 @@ export function createSession(
   profileId: string,
   sessionId = `s${Date.now()}`,
   memo?: PreReadMemo,
+  brief?: CategoryBrief,
 ): SessionState {
   // Deck claims are seeded into the ledger BEFORE the first word, which is what
   // makes deck-vs-spoken contradiction possible on turn one: the founder can
@@ -76,6 +80,7 @@ export function createSession(
     turns: [],
   };
   if (memo) session.memo = memo;
+  if (brief) session.brief = brief;
   return session;
 }
 
@@ -93,6 +98,7 @@ export async function investorTurn(
     session.profile,
     lastFounderTurn?.verdict,
     session.memo,
+    session.brief,
   );
 
   const text = await speak(

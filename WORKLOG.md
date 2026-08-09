@@ -632,3 +632,60 @@ claim: paying customers = twelve
 FINDING: The same number (12) was described as both design partners and customers paying.
 INVESTOR: "You've called the same 12 both design partners and customers paying. Are those the same 12…"
 ```
+
+---
+
+## 2026-08-08 — Category brief: mining X for the questions the market already asks
+
+**Phase:** 4 · **Commit:** pending
+
+**What:** `npm run brief -- "<category>"` and a **+ market** button. Harvests X discussion about
+a category, mines the recurring criticism into objection themes, and compiles each into the
+question an investor would actually ask. Wired into the text engine (question layer 5), the
+voice relay, and the UI.
+
+**Finding the API took three attempts, and the docs were wrong twice.** `search_parameters` on
+chat completions is deprecated and the API says so. The live-search docs page covers web search
+only. The real path is the **Agent Tools API**: `POST /v1/responses` with `input` (not
+`messages`) and `tools: [{type: 'x_search'}]`. The valuable part is `annotations` on the output
+message — `url_citation` entries pointing at real posts.
+
+**Provenance is the design constraint.** A theme with no citable post is dropped before it
+reaches the brief. An objection we cannot link to a real post is one we should not be putting in
+an investor's mouth.
+
+**Three harvest angles, not one.** A single "what do people say about X" query returns bland
+summary. The criticism lives in *replies to specific events*, so the queries hunt launches,
+funding announcements and direct criticism separately, then mine across all three. Run in
+parallel; only the mining step waits.
+
+**The compiled question never cites X.** Real investors absorb sentiment and ask it as their
+own — they do not say "on X someone said". Citations live in the report and the UI panel, not in
+the conversation. Enforced in the mining prompt and again in the engine directive.
+
+**Learned — the layer needed a gate.** Placed per PLAN.md §3.2 (after planned probes, before the
+spine), a category objection fired as the *opening question* — the investor raising a
+category-wide criticism before the founder had said what they do. No real investor does that.
+Now gated on `moveCount >= 3` and at least one spine topic asked: you earn the right to that
+question by listening first.
+
+**Result on "real-time payment fraud detection for fintechs":** 6 objections from 7 cited posts,
+including one from a bank implementation (*"the average customer was logging in 25 times before
+they even transacted — that pricing model obviously became uneconomical"*) and one from patio11
+about fraud systems surfacing incompetence rather than fraud. Compiled questions the investor
+actually asked:
+
+> *"Velocity checks have been in the public literature since the 1990s and still don't ship at a
+> lot of places because of basic data plumbing. When a buyer…"*
+>
+> *"When the card number, PIN, and amount all look valid on the rails, a real-time model has
+> almost nothing to fire on…"*
+
+Those are not questions a generic LLM asks.
+
+**Cost:** 153s, 3 search angles, 134 server-side tool calls, ~$23 by xAI's own `cost_in_usd_ticks`
+— assuming 1e9 ticks = $1, which is inferred, not documented. Higher than the $7 estimated in
+the plan. Amortised weekly across every founder in a category it is still small, but the tick
+conversion should be confirmed against the dashboard before it goes in a cost model.
+
+**Next:** presentation honesty pass, then Phase 3 scoring.

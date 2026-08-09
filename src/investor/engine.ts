@@ -22,12 +22,14 @@ import { SEED_SPINE, topicById, type SpineTopic, type SpineTopicId } from './spi
 import { buildSystemPrompt, type InvestorProfile } from './profiles.ts';
 import type { SatisfactionVerdict } from './satisfaction.ts';
 import { POSTURE_EFFECT, type PreReadMemo } from '../preread/types.ts';
+import type { CategoryBrief } from '../category/types.ts';
 
 export type QuestionLayer =
   | 'contradiction'
   | 'derail'
   | 'follow_up'
   | 'planned_probe'
+  | 'community_objection'
   | 'spine'
   | 'wrap_up';
 
@@ -38,6 +40,7 @@ export interface NextMove {
   topicId?: SpineTopicId;
   finding?: Finding;
   probeId?: string;
+  objectionTheme?: string;
 }
 
 export interface EngineState {
@@ -61,6 +64,8 @@ export interface EngineState {
   derailCount: number;
   /** Pre-read probes already asked, so each fires once. */
   askedProbes: Set<string>;
+  /** Category objections already raised. */
+  askedObjections: Set<string>;
 }
 
 export function initialState(): EngineState {
@@ -74,6 +79,7 @@ export function initialState(): EngineState {
     justDerailed: false,
     derailCount: 0,
     askedProbes: new Set(),
+    askedObjections: new Set(),
   };
 }
 
@@ -103,6 +109,7 @@ export function selectMove(
   profile: InvestorProfile,
   lastVerdict?: SatisfactionVerdict,
   memo?: PreReadMemo,
+  brief?: CategoryBrief,
 ): NextMove {
   // Layer 1 — a contradiction outranks everything else.
   const findings = unraisedFindings(ledger, state.raisedFindings);
@@ -186,6 +193,34 @@ export function selectMove(
     };
   }
 
+  // Layer 5 — an objection the category itself keeps raising.
+  //
+  // Only for profiles that use the brief. The question is pre-compiled by the
+  // brief pipeline and asked as the investor's own — never attributed to X,
+  // because real investors absorb sentiment rather than cite it.
+  //
+  // Gated on having heard something first. Without the guard this fires as the
+  // OPENING question — the investor raising a category-wide criticism before
+  // the founder has said what they do, which no real investor does. You earn
+  // the right to that question by listening for a few turns.
+  const heardEnough = state.moveCount >= 3 && state.asked.size >= 1;
+  if (profile.useCategoryBrief && brief && heardEnough) {
+    const objection = brief.objectionThemes.find((o) => !state.askedObjections.has(o.theme));
+    if (objection) {
+      return {
+        layer: 'community_objection',
+        objectionTheme: objection.theme,
+        directive:
+          `You have watched this category closely, and one criticism comes up every time a ` +
+          `company here launches: "${objection.theme}".\n\n` +
+          `Put that to them now, in your own words. This shape works: ` +
+          `"${objection.investorQuestion}"\n\n` +
+          `Do NOT mention X, posts, tweets or "people online" — this is your own read of the ` +
+          `market, not a citation.`,
+      };
+    }
+  }
+
   // Layer 6 — next unasked spine topic.
   //
   // Reached either because the last answer satisfied, or because the follow-up
@@ -232,6 +267,7 @@ export function applyMove(
   const dodged = new Set(state.dodged);
   const raisedFindings = new Set(state.raisedFindings);
   const askedProbes = new Set(state.askedProbes);
+  const askedObjections = new Set(state.askedObjections);
   let currentTopic = state.currentTopic;
   let followUpCount = state.followUpCount;
 
@@ -242,6 +278,8 @@ export function applyMove(
     // A contradiction interrupts without consuming the topic's follow-up budget.
   } else if (move.layer === 'planned_probe' && move.probeId) {
     askedProbes.add(move.probeId);
+  } else if (move.layer === 'community_objection' && move.objectionTheme) {
+    askedObjections.add(move.objectionTheme);
   } else if (move.layer === 'derail') {
     derailCount += 1;
     // A derail costs the founder a turn but does not advance or close a topic.
@@ -272,6 +310,7 @@ export function applyMove(
     justDerailed: move.layer === 'derail',
     derailCount,
     askedProbes,
+    askedObjections,
   };
   if (currentTopic) next.currentTopic = currentTopic;
   return next;

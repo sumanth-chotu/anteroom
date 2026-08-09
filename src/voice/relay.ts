@@ -25,6 +25,7 @@ import { findingKey, runChecks } from '../ledger/checks.ts';
 import { normaliseSpokenClaim } from '../ledger/normalise.ts';
 import { parseSpokenNumber } from '../ledger/number.ts';
 import type { PreReadMemo } from '../preread/types.ts';
+import type { CategoryBrief } from '../category/types.ts';
 
 const UPSTREAM = `${config.xai.baseUrl.replace(/^http/, 'ws')}/realtime?model=${config.xai.voice}`;
 
@@ -51,6 +52,7 @@ function makeLog(id: string) {
 export interface VoiceSessionOptions {
   profileId: string;
   memo?: PreReadMemo;
+  brief?: CategoryBrief;
 }
 
 /** Everything the UI needs to render the session as it happens. */
@@ -99,6 +101,22 @@ function buildInstructions(options: VoiceSessionOptions): string {
           .join('\n') +
         `\n\nWork through these in your own words as the conversation allows. Never mention ` +
         `notes, a memo, or a pre-read — you simply read the deck.`,
+    );
+  }
+
+  // Category objections, pre-compiled into questions by the brief pipeline.
+  // Asked as the investor's own read of the market — never attributed to X.
+  if (options.brief && profile.useCategoryBrief && options.brief.objectionThemes.length) {
+    parts.push(
+      `\nWHAT YOU KNOW ABOUT THIS CATEGORY.\n` +
+        `You have watched this space closely. These criticisms come up every time a company ` +
+        `here launches:\n` +
+        options.brief.objectionThemes
+          .slice(0, 4)
+          .map((o, i) => `${i + 1}. "${o.theme}" — you'd ask: ${o.investorQuestion}`)
+          .join('\n') +
+        `\n\nWork at least one of these in. Never mention X, posts or "people online" — this is ` +
+        `your own read of the market, not a citation.`,
     );
   }
 
@@ -177,6 +195,7 @@ export function createVoiceRelay(): WebSocketServer {
     const raised = new Set<string>();
     let claimSeq = 0;
     let memo: PreReadMemo | undefined;
+    let brief: CategoryBrief | undefined;
     let closed = false;
 
     const notify = (notice: RelayNotice) => {
@@ -305,6 +324,7 @@ export function createVoiceRelay(): WebSocketServer {
       // instructions without a second round trip to the session store.
       if (message['type'] === 'start') {
         memo = message['memo'] as PreReadMemo | undefined;
+        brief = message['brief'] as CategoryBrief | undefined;
         if (memo?.claims?.length) {
           ledger = { ...ledger, claims: memo.claims.map((c) => ({ ...c, sessionId: ledger.sessionId })) };
         }
@@ -349,7 +369,11 @@ export function createVoiceRelay(): WebSocketServer {
           JSON.stringify({
             type: 'session.update',
             session: {
-              instructions: buildInstructions({ profileId, ...(memo ? { memo } : {}) }),
+              instructions: buildInstructions({
+                profileId,
+                ...(memo ? { memo } : {}),
+                ...(brief ? { brief } : {}),
+              }),
               // Server VAD is OFF by default — without this the agent never
               // responds to speech. Verified via probe.
               turn_detection: { type: 'server_vad' },

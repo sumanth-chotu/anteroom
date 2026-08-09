@@ -181,6 +181,14 @@ export function sessionView(session: SessionState, usageAtStart: UsageSnapshot) 
           deckScore: session.memo.deckScore,
         }
       : null,
+    brief: session.brief
+      ? {
+          category: session.brief.category,
+          objectionThemes: session.brief.objectionThemes,
+          events: session.brief.events,
+          sourceCount: session.brief.sources.length,
+        }
+      : null,
     usage: diffUsage(usageAtStart, snapshotUsage()),
   };
 }

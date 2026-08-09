@@ -20,6 +20,7 @@ import { openInput } from './input.ts';
 import { generatePreRead } from '../preread/preread.ts';
 import { POSTURE_LABEL, type PreReadMemo } from '../preread/types.ts';
 import { computePostureDelta } from '../preread/delta.ts';
+import { briefPriors, type CategoryBrief } from '../category/types.ts';
 import {
   createSession,
   probeOutcomes,
@@ -86,7 +87,12 @@ if (args.includes('--list')) {
 const deckFlag = args.indexOf('--deck');
 const deckPath = deckFlag >= 0 ? args[deckFlag + 1] : undefined;
 
-const requested = args.filter((a) => a !== deckPath).find((a) => !a.startsWith('--')) ?? '';
+// --brief <path>  attach a category brief built by `npm run brief`
+const briefFlag = args.indexOf('--brief');
+const briefPath = briefFlag >= 0 ? args[briefFlag + 1] : undefined;
+
+const requested =
+  args.filter((a) => a !== deckPath && a !== briefPath).find((a) => !a.startsWith('--')) ?? '';
 const profileId = ALIASES[requested] ?? (requested || DEFAULT_PROFILE_ID);
 const profile = getProfile(profileId);
 
@@ -136,8 +142,19 @@ if (deckPath) {
   );
 }
 
+let brief: CategoryBrief | undefined;
+if (briefPath) {
+  brief = JSON.parse(await readFile(resolve(briefPath), 'utf8')) as CategoryBrief;
+  console.log(
+    C.grey(
+      `  category brief: ${brief.category} · ${brief.objectionThemes.length} objections · ` +
+        `${brief.sources.length} posts\n    ${briefPriors(brief).map((p) => `"${p}"`).join(' · ')}\n`,
+    ),
+  );
+}
+
 const input = await openInput();
-let session = createSession(profileId, undefined, memo);
+let session = createSession(profileId, undefined, memo, brief);
 
 try {
   while (true) {
