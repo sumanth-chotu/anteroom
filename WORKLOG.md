@@ -343,3 +343,46 @@ one, so precision matters more than recall here.
 
 **Next:** the five-pass pre-read memo (planned probes, posture, caseForNo), wiring it into the
 session opening, and deck UI.
+
+---
+
+## 2026-08-08 — Phase 1b: the pre-read memo
+
+**Phase:** 1 · **Commit:** pending
+
+**What:** `npm run preread -- <deck>` and `npm run pitch -- <profile> --deck <deck>`.
+
+Five passes: per-slide vision → cross-slide checks → (category priors, Phase 4) → **adversarial
+case-for-no** → synthesis. Produces understood/confused, ranked red flags, `caseForNo` verbatim,
+4–6 ranked planned probes, and an initial posture.
+
+Wired into the session: deck claims seed the ledger *before* turn one, planned probes become
+question layer 4, and posture modulates warmth and patience.
+
+**Why pass 4 runs before pass 5, strictly.** The case for declining is an *input* to synthesis,
+not a sibling of it. Forcing an explicit best-case-for-no before the memo is written is what
+stops it reading like a summary by someone who wants to like the company. It produced:
+*"Skip this one. Traction is mostly optics: slide 4 leads with 12 design partners and a 40% WoW
+curve on an unlabeled axis, while slide 5's logo grid is footnoted as pilots and slide 8 admits
+only 8 paying customers today."*
+
+**Why deck claims seed the ledger before the first word.** It makes the opening turn a
+deck-derived contradiction. On the fixture the investor opened with *"40% growth on 8 customers
+is three people. Give me the absolute paying numbers month by month"* — before the founder said
+anything. That is the demo.
+
+**Probe ordering:** contradiction → derail → follow-up → **planned probe** → spine. After
+follow-up deliberately (finish the thread you are on), ahead of spine (what the deck made you
+want to ask beats a generic checklist item).
+
+**Learned — a subtle bug only a live session surfaced.** `findingKey` was keyed on claim ids.
+As the founder revised a number the check re-fired against the *new* claim, produced a fresh
+key, and asked the same question again: *"40% growth on 8 is three people, give me the monthly
+numbers"* … three turns later … *"40% growth on 4 is two people, give me the monthly numbers."*
+Same question, and it reads as not listening — the one thing an investor never does. Now keyed
+on kind + metrics, which are stable across revisions. Two tests encode it.
+
+**Measured:** pre-read on an 8-slide deck — 26 calls, 68k in / 5.3k out, **~$0.17**, ~40s.
+Posture came out `LOOKING FOR THE NO` on the deliberately weak fixture, which is correct.
+
+**Next:** deck upload + memo panel in the UI, then the posture delta (§6.6).

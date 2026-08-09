@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   arithmeticMismatches,
+  findingKey,
   commitmentConflations,
   directContradictions,
   implausibleAcv,
@@ -287,5 +288,38 @@ describe('runChecks', () => {
       ledgerOf(claim('design_partners', 12), claim('months_working_on_it', 36)),
     );
     assert.ok(new Set(bare.map((f) => f.kind)).has('timeline_inconsistency'));
+  });
+});
+
+describe('findingKey', () => {
+  test('stays stable when the founder revises the underlying number', () => {
+    // Live bug: the investor asked "40% growth on 8 is three people, give me
+    // the monthly numbers", the founder revised 8 to 4, and the check re-fired
+    // against the new claim with a fresh key — asking the same question again.
+    // Keying on metrics rather than claim ids makes one topic raise once.
+    const before = smallBaseGrowth(
+      ledgerOf(claim('growth_rate_wow', 40), claim('customers_total', 8)),
+    )[0];
+    const after = smallBaseGrowth(
+      ledgerOf(claim('growth_rate_wow', 40), claim('customers_total', 4)),
+    )[0];
+
+    assert.ok(before && after);
+    assert.equal(findingKey(before), findingKey(after));
+  });
+
+  test('different finding kinds on the same metrics stay distinct', () => {
+    const conflation = commitmentConflations(
+      ledgerOf(claim('design_partners', 12), claim('customers_paying', 12)),
+    )[0];
+    const contradiction = directContradictions(
+      ledgerOf(
+        claim('customers_paying', 12, { period: 'now', turnId: 'a' }),
+        claim('customers_paying', 8, { period: 'now', turnId: 'b' }),
+      ),
+    )[0];
+
+    assert.ok(conflation && contradiction);
+    assert.notEqual(findingKey(conflation), findingKey(contradiction));
   });
 });

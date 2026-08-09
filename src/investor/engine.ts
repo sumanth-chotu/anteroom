@@ -21,8 +21,15 @@ import { findingKey, unraisedFindings } from '../ledger/checks.ts';
 import { SEED_SPINE, topicById, type SpineTopic, type SpineTopicId } from './spine.ts';
 import { buildSystemPrompt, type InvestorProfile } from './profiles.ts';
 import type { SatisfactionVerdict } from './satisfaction.ts';
+import { POSTURE_EFFECT, type PreReadMemo } from '../preread/types.ts';
 
-export type QuestionLayer = 'contradiction' | 'derail' | 'follow_up' | 'spine' | 'wrap_up';
+export type QuestionLayer =
+  | 'contradiction'
+  | 'derail'
+  | 'follow_up'
+  | 'planned_probe'
+  | 'spine'
+  | 'wrap_up';
 
 export interface NextMove {
   layer: QuestionLayer;
@@ -30,6 +37,7 @@ export interface NextMove {
   directive: string;
   topicId?: SpineTopicId;
   finding?: Finding;
+  probeId?: string;
 }
 
 export interface EngineState {
@@ -51,6 +59,8 @@ export interface EngineState {
   justDerailed: boolean;
   /** Derails issued, for the room-control metric. */
   derailCount: number;
+  /** Pre-read probes already asked, so each fires once. */
+  askedProbes: Set<string>;
 }
 
 export function initialState(): EngineState {
@@ -63,6 +73,7 @@ export function initialState(): EngineState {
     moveCount: 0,
     justDerailed: false,
     derailCount: 0,
+    askedProbes: new Set(),
   };
 }
 
@@ -91,6 +102,7 @@ export function selectMove(
   ledger: Ledger,
   profile: InvestorProfile,
   lastVerdict?: SatisfactionVerdict,
+  memo?: PreReadMemo,
 ): NextMove {
   // Layer 1 — a contradiction outranks everything else.
   const findings = unraisedFindings(ledger, state.raisedFindings);
@@ -155,6 +167,25 @@ export function selectMove(
     };
   }
 
+  // Layer 4 — a probe the investor walked in intending to ask.
+  //
+  // Placed after follow-up deliberately: finish the thread you are on before
+  // opening a new one. But ahead of the spine, because what the deck made you
+  // want to ask beats a generic checklist item every time.
+  const probe = memo?.plannedProbes.find((p) => !state.askedProbes.has(p.id));
+  if (probe) {
+    return {
+      layer: 'planned_probe',
+      probeId: probe.id,
+      directive:
+        `Before this meeting you read their deck and wrote down that you wanted to ask about ` +
+        `${probe.topic}` +
+        (probe.slideRef ? ` (slide ${probe.slideRef})` : '') +
+        `.\n\nAsk it now, in your own voice. Your note to yourself read: "${probe.question}"\n\n` +
+        `You already know what the deck says — do not ask them to repeat it back to you.`,
+    };
+  }
+
   // Layer 6 — next unasked spine topic.
   //
   // Reached either because the last answer satisfied, or because the follow-up
@@ -200,6 +231,7 @@ export function applyMove(
   const satisfied = new Set(state.satisfied);
   const dodged = new Set(state.dodged);
   const raisedFindings = new Set(state.raisedFindings);
+  const askedProbes = new Set(state.askedProbes);
   let currentTopic = state.currentTopic;
   let followUpCount = state.followUpCount;
 
@@ -208,6 +240,8 @@ export function applyMove(
   if (move.layer === 'contradiction' && move.finding) {
     raisedFindings.add(findingKey(move.finding));
     // A contradiction interrupts without consuming the topic's follow-up budget.
+  } else if (move.layer === 'planned_probe' && move.probeId) {
+    askedProbes.add(move.probeId);
   } else if (move.layer === 'derail') {
     derailCount += 1;
     // A derail costs the founder a turn but does not advance or close a topic.
@@ -237,6 +271,7 @@ export function applyMove(
     moveCount: state.moveCount + 1,
     justDerailed: move.layer === 'derail',
     derailCount,
+    askedProbes,
   };
   if (currentTopic) next.currentTopic = currentTopic;
   return next;
@@ -253,11 +288,21 @@ export interface Turn {
  * The directive is delivered as a system-role message *after* the history, so
  * it carries operator authority and cannot be confused with founder speech.
  */
+const POSTURE_NOTE: Record<string, string> = {
+  leaning_in: 'You liked the deck. You want to be convinced, and it shows.',
+  neutral: 'The deck was fine. You have no strong prior either way.',
+  skeptical: 'Several things in the deck bothered you. You are harder to please than usual today.',
+  looking_for_the_no:
+    'The deck did not land. You expect to pass and are looking for the reason — you are short, ' +
+    'unhurried in the wrong way, and not inclined to help them out.',
+};
+
 export async function speak(
   profile: InvestorProfile,
   history: Turn[],
   move: NextMove,
   opening = false,
+  memo?: PreReadMemo,
 ): Promise<string> {
   const messages = [
     { role: 'system' as const, content: buildSystemPrompt(profile) },
@@ -266,6 +311,22 @@ export async function speak(
       content: turn.text,
     })),
   ];
+
+  // Posture arrives as an operator instruction after the history, so a weak
+  // deck produces a visibly impatient investor rather than a neutral one.
+  if (memo) {
+    messages.push({
+      role: 'system' as const,
+      content:
+        `You read their deck before this meeting.\n` +
+        `What it says they do: ${memo.oneLinerFromFullDeck}\n` +
+        (memo.redFlags.length
+          ? `What bothered you most: ${memo.redFlags[0]?.summary}\n`
+          : '') +
+        `\nHow you feel walking in: ${POSTURE_NOTE[memo.initialPosture] ?? ''}\n` +
+        `Never mention that you have notes, a memo, or a pre-read. You just read the deck.`,
+    });
+  }
 
   if (opening) {
     messages.push({
@@ -289,6 +350,16 @@ export async function speak(
   });
 
   return result.text.trim();
+}
+
+/** Profile dials adjusted by pre-read posture (PLAN.md §6.5). */
+export function adjustedDials(profile: InvestorProfile, memo?: PreReadMemo) {
+  const effect = memo ? POSTURE_EFFECT[memo.initialPosture] : { warmth: 1, patience: 1 };
+  return {
+    warmth: Math.max(0, Math.min(1, profile.warmth * effect.warmth)),
+    interruptThresholdMs: Math.round(profile.interruptThresholdMs * effect.patience),
+    followUpDepth: profile.followUpDepth,
+  };
 }
 
 export interface CoverageReport {

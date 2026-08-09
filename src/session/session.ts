@@ -27,6 +27,7 @@ import {
   type Turn,
 } from '../investor/engine.ts';
 import { getProfile, isChaotic, type InvestorProfile } from '../investor/profiles.ts';
+import type { PreReadMemo } from '../preread/types.ts';
 import { topicById } from '../investor/spine.ts';
 
 export interface SessionTurn extends Turn {
@@ -34,6 +35,8 @@ export interface SessionTurn extends Turn {
   at: number;
   /** Present on investor turns. */
   layer?: NextMove['layer'];
+  /** Present when this turn asked a pre-read probe. */
+  probeId?: string;
   /** Present on founder turns — the verdict on that answer. */
   verdict?: SatisfactionVerdict;
   /** Claims extracted from a founder turn. */
@@ -45,20 +48,35 @@ export interface SessionTurn extends Turn {
 export interface SessionState {
   id: string;
   profile: InvestorProfile;
+  /** Present when the founder uploaded a deck before the meeting. */
+  memo?: PreReadMemo;
   engine: EngineState;
   ledger: Ledger;
   turns: SessionTurn[];
   pendingMove?: NextMove;
 }
 
-export function createSession(profileId: string, sessionId = `s${Date.now()}`): SessionState {
-  return {
+export function createSession(
+  profileId: string,
+  sessionId = `s${Date.now()}`,
+  memo?: PreReadMemo,
+): SessionState {
+  // Deck claims are seeded into the ledger BEFORE the first word, which is what
+  // makes deck-vs-spoken contradiction possible on turn one: the founder can
+  // contradict slide 4 with their opening sentence and get caught for it.
+  const ledger = memo
+    ? { ...emptyLedger(sessionId), claims: memo.claims.map((c) => ({ ...c, sessionId })) }
+    : emptyLedger(sessionId);
+
+  const session: SessionState = {
     id: sessionId,
     profile: getProfile(profileId),
     engine: initialState(),
-    ledger: emptyLedger(sessionId),
+    ledger,
     turns: [],
   };
+  if (memo) session.memo = memo;
+  return session;
 }
 
 let turnSeq = 0;
@@ -69,13 +87,20 @@ export async function investorTurn(
   session: SessionState,
 ): Promise<{ session: SessionState; text: string; move: NextMove }> {
   const lastFounderTurn = [...session.turns].reverse().find((t) => t.role === 'founder');
-  const move = selectMove(session.engine, session.ledger, session.profile, lastFounderTurn?.verdict);
+  const move = selectMove(
+    session.engine,
+    session.ledger,
+    session.profile,
+    lastFounderTurn?.verdict,
+    session.memo,
+  );
 
   const text = await speak(
     session.profile,
     session.turns.map(({ role, text }) => ({ role, text })),
     move,
     session.turns.length === 0,
+    session.memo,
   );
 
   const turn: SessionTurn = {
@@ -85,6 +110,7 @@ export async function investorTurn(
     at: Date.now(),
     layer: move.layer,
   };
+  if (move.probeId) turn.probeId = move.probeId;
 
   return {
     session: { ...session, turns: [...session.turns, turn], pendingMove: move },
@@ -137,8 +163,33 @@ export async function founderTurn(
   };
 }
 
+/**
+ * Which pre-read probes actually got answered.
+ *
+ * "They came in wanting to understand your retention. You never gave them a
+ * number." — that line only exists because this is tracked.
+ */
+export function probeOutcomes(session: SessionState) {
+  const memo = session.memo;
+  if (!memo) return [];
+
+  return memo.plannedProbes.map((probe) => {
+    const askedAt = session.turns.findIndex(
+      (t) => t.role === 'investor' && t.probeId === probe.id,
+    );
+    if (askedAt === -1) return { ...probe, resolved: 'unasked' as const };
+
+    const answer = session.turns.slice(askedAt + 1).find((t) => t.role === 'founder');
+    return {
+      ...probe,
+      resolved: answer?.verdict?.satisfied ? ('satisfied' as const) : ('dodged' as const),
+    };
+  });
+}
+
 export function isComplete(session: SessionState): boolean {
-  return coverageReport(session.engine).unasked.length === 0;
+  const probesLeft = probeOutcomes(session).some((p) => p.resolved === 'unasked');
+  return coverageReport(session.engine).unasked.length === 0 && !probesLeft;
 }
 
 /** Deterministic metrics computable without a model. (PLAN.md §8.3) */

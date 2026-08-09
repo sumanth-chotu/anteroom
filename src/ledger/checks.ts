@@ -362,13 +362,22 @@ export function runChecks(ledger: Ledger): Finding[] {
 }
 
 /**
- * Findings not yet raised in conversation.
+ * Identity of a finding, for "have we already asked about this?".
  *
- * A finding is identified by kind plus the claims involved, so a contradiction
- * asked about once doesn't resurface every turn.
+ * Keyed on kind + the METRICS involved, deliberately not the claim ids.
+ *
+ * Claim ids looked right and were wrong: as the founder revises a number, the
+ * check re-fires against the new claim, producing a fresh key and asking the
+ * same question again. Observed live — the investor asked "40% growth on 8 is
+ * three people, give me the monthly numbers", the founder revised 8 to 4, and
+ * three turns later it asked "40% growth on 4 is two people, give me the
+ * monthly numbers". Same question, and it reads as not listening.
+ *
+ * Metrics are stable across revisions, so one topic is raised once.
  */
 export function findingKey(finding: Finding): string {
-  return `${finding.kind}::${finding.claims.map((c) => c.id).sort().join(',')}`;
+  const metrics = [...new Set(finding.claims.map((c) => c.metric))].sort().join('+');
+  return `${finding.kind}::${metrics}`;
 }
 
 export function unraisedFindings(ledger: Ledger, raised: ReadonlySet<string>): Finding[] {

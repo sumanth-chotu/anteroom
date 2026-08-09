@@ -13,9 +13,15 @@
  * how the satisfaction gate scored each answer.
  */
 
+import { readFile } from 'node:fs/promises';
+import { basename, resolve } from 'node:path';
+
 import { openInput } from './input.ts';
+import { generatePreRead } from '../preread/preread.ts';
+import { POSTURE_LABEL, type PreReadMemo } from '../preread/types.ts';
 import {
   createSession,
+  probeOutcomes,
   founderTurn,
   investorTurn,
   isComplete,
@@ -74,7 +80,11 @@ if (args.includes('--list')) {
   process.exit(0);
 }
 
-const requested = args.find((a) => !a.startsWith('--')) ?? '';
+// --deck <path>  attach a deck; runs the pre-read first (or loads a cached one)
+const deckFlag = args.indexOf('--deck');
+const deckPath = deckFlag >= 0 ? args[deckFlag + 1] : undefined;
+
+const requested = args.filter((a) => a !== deckPath).find((a) => !a.startsWith('--')) ?? '';
 const profileId = ALIASES[requested] ?? (requested || DEFAULT_PROFILE_ID);
 const profile = getProfile(profileId);
 
@@ -105,8 +115,27 @@ if (who) {
 }
 console.log(C.dim(`Type your answers. "quit" to end early and see the debrief.\n`));
 
+// ── pre-read ─────────────────────────────────────────────────────────────────
+let memo: PreReadMemo | undefined;
+if (deckPath) {
+  const cached = resolve('.tmp/prereads', `${basename(deckPath).replace(/\.\w+$/, '')}.json`);
+  try {
+    memo = JSON.parse(await readFile(cached, 'utf8')) as PreReadMemo;
+    console.log(C.dim(`  using cached pre-read (${basename(cached)})`));
+  } catch {
+    console.log(C.dim(`  reading ${basename(deckPath)} before the meeting…`));
+    memo = (await generatePreRead(deckPath)).memo;
+  }
+  console.log(
+    C.grey(
+      `  ${memo.slideCount} slides · walks in ${C.bold(POSTURE_LABEL[memo.initialPosture].toUpperCase())}` +
+        ` · ${memo.plannedProbes.length} things to dig into · ${memo.claims.length} deck claims in the ledger\n`,
+    ),
+  );
+}
+
 const input = await openInput();
-let session = createSession(profileId);
+let session = createSession(profileId, undefined, memo);
 
 try {
   while (true) {
@@ -201,6 +230,22 @@ if (metrics.chaotic) {
         `followed ${C.red(String(metrics.followed))}  →  ${colour(`${score}%`)}`,
     );
     for (const note of metrics.roomControlNotes) console.log(C.grey(`    · ${note}`));
+  }
+}
+
+const probes = probeOutcomes(session);
+if (probes.length) {
+  console.log(`\n${C.bold('  What they came in wanting to ask')}`);
+  for (const p of probes) {
+    const mark =
+      p.resolved === 'satisfied' ? C.green('✓') : p.resolved === 'dodged' ? C.red('✗') : C.grey('·');
+    const note =
+      p.resolved === 'dodged'
+        ? C.red(' — asked, never answered')
+        : p.resolved === 'unasked'
+          ? C.grey(' — never got to it')
+          : '';
+    console.log(`    ${mark} ${p.topic}${note}`);
   }
 }
 

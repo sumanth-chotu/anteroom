@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "ui": "node --env-file=.env --experimental-strip-types src/server/server.ts",
     "deck": "node --env-file=.env --experimental-strip-types src/cli/deck.ts",
-    "fixture:deck": "\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=fixtures/decks/planted-flaws/deck.pdf fixtures/decks/planted-flaws/deck.html"
+    "fixture:deck": "\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=fixtures/decks/planted-flaws/deck.pdf fixtures/decks/planted-flaws/deck.html",
+    "preread": "node --env-file=.env --experimental-strip-types src/cli/preread.ts"
   },
   "dependencies": {
     "zod": "^3.23.8"

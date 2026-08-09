@@ -364,3 +364,55 @@ Both found by the first real run, both passing unit tests:
 
 The through-line: **a false finding is worse than a missed one.** It discredits every true
 finding, and this product is nothing if the founder stops believing it.
+
+---
+
+## Slide: the pre-read — the artifact nobody has seen
+
+A real investor forms most of their opinion in the four minutes they skim your deck. **Founders
+never learn what that opinion was.** This is it.
+
+Five passes. The ordering matters: the **case for declining is written before the memo**, and
+fed into it as an input. That is the anti-sycophancy control at this stage — it stops the memo
+reading like a summary by someone who wants to like the company.
+
+Real output, unedited:
+
+> **Walking in:** `LOOKING FOR THE NO`
+>
+> **The case for passing** *(written before anything else)*
+> *"Skip this one. Traction is mostly optics: slide 4 leads with '12 design partners' and a 40%
+> WoW curve on an unlabeled axis, while slide 5's logo grid is footnoted as pilots/trials and
+> slide 8 admits only 8 paying customers today. Real-time fraud scoring is a crowded
+> knife-fight; this deck doesn't show me why they win it."*
+>
+> **What I'm going to ask you** *(6 ranked probes)*
+> 1. *"Slide 5 titles eight logos 'Our customers' with a footnote that includes pilots and design
+>    partners, and slide 8 says eight paying today — are those the same eight?"*
+> 2. *"The slide 4 curve is labeled volume scored but has no y-axis numbers — what was weekly
+>    volume at the left edge versus now, and is that 40% on a base near the eight paying?"*
+
+### The moment that makes the demo
+
+With the deck attached, the investor opens **before the founder speaks**:
+
+> *"40% growth on 8 customers is three people. Give me the absolute paying numbers month by
+> month."*
+
+Deck claims are seeded into the ledger at session start, so the founder can contradict slide 4
+with their opening sentence — and get caught for it. In testing they did: claimed "all 12 are
+paying", then "about four have signed", and the ledger caught both.
+
+**Posture is derived, not configured.** The weak fixture deck produced `LOOKING FOR THE NO`,
+which then made the investor colder and less patient for the whole session. Sessions stop
+feeling identical because the deck changes the room.
+
+**Cost:** ~$0.17 and ~40s for an 8-slide deck. Entirely off the latency path — it runs before
+the founder joins.
+
+### One more bug worth telling
+
+`findingKey` was keyed on claim ids. When the founder revised a number, the check re-fired
+against the new claim with a fresh key — and asked the same question again three turns later.
+**An investor who repeats a question reads as not listening**, the one thing they never do.
+Fixed by keying on metrics, which are stable across revisions.
