@@ -1,0 +1,531 @@
+{
+  "generatedAt": "2026-08-09T01:29:31.577Z",
+  "deckPath": "fixtures/decks/planted-flaws/deck.pdf",
+  "slideCount": 8,
+  "oneLinerFromSlide1": "An AI-powered intelligence platform for modern teams.",
+  "oneLinerFromFullDeck": "Sentinel is a real-time AI platform that scores online payment transactions in under 200ms to accept, review, or decline them before settlement and reduce fraud.",
+  "understood": [
+    "Real-time payment fraud scoring under 200ms (accept/review/decline)",
+    "$3M seed for 18 months to go 8 → 100 paying customers and hire six",
+    "They claim some live transaction volume and a mixed set of logos",
+    "Positioning is payments fraud, not the generic 'AI for modern teams' title"
+  ],
+  "confused": [
+    "Which of the eight logos are actually paying vs pilots/design partners",
+    "What the unlabeled 'volume scored' curve actually quantifies (time, units, start/end)",
+    "Who the CEO/CTO are and any relevant fraud/payments track record",
+    "Why anyone picks them over incumbents — zero competitive framing"
+  ],
+  "missingSections": [
+    "solution",
+    "competition"
+  ],
+  "claims": [
+    {
+      "id": "preread-c33",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "other",
+      "value": 2026,
+      "valueRaw": "2026",
+      "verbatim": "Seed round · 2026",
+      "confidence": 0.9,
+      "createdAt": 1786238921504,
+      "slideNumber": 1
+    },
+    {
+      "id": "preread-c25",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "other",
+      "value": 200,
+      "valueRaw": "under 200 milliseconds",
+      "verbatim": "Sentinel scores every transaction in under 200 milliseconds, inline, before it settles.",
+      "confidence": 0.95,
+      "createdAt": 1786238916937,
+      "slideNumber": 3,
+      "unit": "milliseconds"
+    },
+    {
+      "id": "preread-c18",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "design_partners",
+      "value": 12,
+      "valueRaw": "12",
+      "verbatim": "design partners: 12",
+      "confidence": 1,
+      "createdAt": 1786238914284,
+      "slideNumber": 4
+    },
+    {
+      "id": "preread-c19",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "growth_rate_wow",
+      "value": 40,
+      "valueRaw": "40%",
+      "verbatim": "week over week: 40%",
+      "confidence": 1,
+      "createdAt": 1786238914284,
+      "slideNumber": 4,
+      "unit": "%",
+      "period": "week over week"
+    },
+    {
+      "id": "preread-c20",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "other",
+      "value": 200,
+      "valueRaw": "200ms",
+      "verbatim": "p99 latency: 200ms",
+      "confidence": 1,
+      "createdAt": 1786238914284,
+      "slideNumber": 4,
+      "unit": "ms"
+    },
+    {
+      "id": "preread-c22",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "tam",
+      "value": 50000000000,
+      "valueRaw": "$50B",
+      "verbatim": "global fraud prevention spend: $50B",
+      "confidence": 0.95,
+      "createdAt": 1786238916142,
+      "slideNumber": 6,
+      "unit": "USD"
+    },
+    {
+      "id": "preread-c23",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "som",
+      "value": 500000000,
+      "valueRaw": "$500M",
+      "verbatim": "Capturing just 1% of this market is a $500M revenue business.",
+      "confidence": 0.9,
+      "createdAt": 1786238916142,
+      "slideNumber": 6,
+      "unit": "USD"
+    },
+    {
+      "id": "preread-c24",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "other",
+      "value": 1,
+      "valueRaw": "1%",
+      "verbatim": "Capturing just 1% of this market is a $500M revenue business.",
+      "confidence": 0.9,
+      "createdAt": 1786238916142,
+      "slideNumber": 6,
+      "unit": "%"
+    },
+    {
+      "id": "preread-c21",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "other",
+      "value": 6,
+      "valueRaw": "six years",
+      "verbatim": "CEO tenure at prior payments company: six years",
+      "confidence": 0.95,
+      "createdAt": 1786238915346,
+      "slideNumber": 7,
+      "unit": "years"
+    },
+    {
+      "id": "preread-c26",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "raise_amount",
+      "value": 3000000,
+      "valueRaw": "$3M",
+      "verbatim": "seed round: $3M",
+      "confidence": 0.95,
+      "createdAt": 1786238920928,
+      "slideNumber": 8,
+      "unit": "USD"
+    },
+    {
+      "id": "preread-c27",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "runway_months",
+      "value": 18,
+      "valueRaw": "18mo",
+      "verbatim": "runway: 18mo",
+      "confidence": 0.95,
+      "createdAt": 1786238920928,
+      "slideNumber": 8,
+      "unit": "months"
+    },
+    {
+      "id": "preread-c28",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "customers_paying",
+      "value": 8,
+      "valueRaw": "8",
+      "verbatim": "paying customers today: 8",
+      "confidence": 0.95,
+      "createdAt": 1786238920928,
+      "slideNumber": 8,
+      "period": "today"
+    },
+    {
+      "id": "preread-c29",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "customers_paying",
+      "value": 100,
+      "valueRaw": "100",
+      "verbatim": "target paying customers: 100",
+      "confidence": 0.9,
+      "createdAt": 1786238920928,
+      "slideNumber": 8,
+      "period": "target"
+    },
+    {
+      "id": "preread-c30",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "headcount",
+      "value": 4,
+      "valueRaw": "four",
+      "verbatim": "engineers to hire: four",
+      "confidence": 0.85,
+      "createdAt": 1786238920928,
+      "slideNumber": 8,
+      "unit": "people"
+    },
+    {
+      "id": "preread-c31",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "headcount",
+      "value": 2,
+      "valueRaw": "two",
+      "verbatim": "go-to-market hires: two",
+      "confidence": 0.85,
+      "createdAt": 1786238920928,
+      "slideNumber": 8,
+      "unit": "people"
+    },
+    {
+      "id": "preread-c32",
+      "sessionId": "preread",
+      "source": "deck",
+      "metric": "other",
+      "value": 8,
+      "valueRaw": "8",
+      "verbatim": "slide number: 8",
+      "confidence": 0.7,
+      "createdAt": 1786238920928,
+      "slideNumber": 8
+    }
+  ],
+  "slideCritiques": [
+    {
+      "slideNumber": 1,
+      "detectedSection": "title",
+      "purpose": "Introduce the company name, one-line description, and that this is a 2026 seed round deck.",
+      "landsAs": "A clean but generic title card that names Sentinel and tags it as an AI intelligence platform without any differentiating hook.",
+      "issues": [],
+      "visibleText": "Sentinel\nAn AI-powered intelligence platform for modern teams.\nSeed round · 2026\n1",
+      "numbers": [
+        {
+          "label": "slide number",
+          "value": "1"
+        },
+        {
+          "label": "seed round year",
+          "value": "2026"
+        }
+      ],
+      "verdict": "adequate",
+      "evidence": "Sparse title slide with only company name, tagline, and 'Seed round · 2026'; no charts, claims, sources, or dense text that would trigger the issue vocabulary."
+    },
+    {
+      "slideNumber": 2,
+      "detectedSection": "problem",
+      "purpose": "State the pain of online payment fraud and why existing batch tools fail risk teams.",
+      "landsAs": "A clean, readable problem statement that fraud costs billions and current tools only catch it after the money moves.",
+      "issues": [
+        "no_source"
+      ],
+      "visibleText": "The problem\n\nOnline payment fraud costs companies billions every year.\n\nExisting tools run in batch. By the time they flag a transaction, the money has already moved and the chargeback is inevitable.\n\nRisk teams are stuck reviewing what already happened.\n\n2",
+      "numbers": [],
+      "verdict": "adequate",
+      "evidence": "The opening claim 'Online payment fraud costs companies billions every year.' is presented with no citation or source."
+    },
+    {
+      "slideNumber": 3,
+      "detectedSection": "product",
+      "purpose": "Explain what the product does: real-time inline transaction scoring that returns accept/review/decline before settlement.",
+      "landsAs": "A sparse product one-liner that names Sentinel and a latency claim but gives almost no visual or structural sense of the product.",
+      "issues": [],
+      "visibleText": "What we do\n\nSentinel scores every transaction in under 200 milliseconds, inline, before it settles.\n\nWe combine device signals, behavioural features and a low-latency model to give an accept / review / decline decision synchronously.\n\n3",
+      "numbers": [
+        {
+          "label": "transaction scoring latency",
+          "value": "under 200 milliseconds"
+        },
+        {
+          "label": "slide number",
+          "value": "3"
+        }
+      ],
+      "verdict": "adequate",
+      "evidence": "Slide is only a title plus two short paragraphs of plain product copy; no charts, logos, sources, caveats, or dense walls of text are present. Latency claim and decision types are stated clearly in body text."
+    },
+    {
+      "slideNumber": 4,
+      "detectedSection": "traction",
+      "purpose": "Show early traction via partner count, growth rate, latency, and a rising volume chart.",
+      "landsAs": "Three big numbers and a smooth upward curve with no scale, so the growth claim is pure visual implication.",
+      "issues": [
+        "unlabeled_axis"
+      ],
+      "visibleText": "Traction\n12\ndesign partners\n40%\nweek over week\n200ms\np99 latency\nVolume scored\n4",
+      "numbers": [
+        {
+          "label": "design partners",
+          "value": "12"
+        },
+        {
+          "label": "week over week",
+          "value": "40%"
+        },
+        {
+          "label": "p99 latency",
+          "value": "200ms"
+        }
+      ],
+      "verdict": "weak",
+      "evidence": "The line chart has a y-axis with no numbers or units and an x-axis labeled only 'Volume scored' with no scale or time markers, so the steep blue curve cannot be quantified."
+    },
+    {
+      "slideNumber": 5,
+      "detectedSection": "traction",
+      "purpose": "Show traction by listing recognizable customer names under the heading \"Our customers.\"",
+      "landsAs": "A grid of eight name-boxes presented as customers, undercut by a tiny footnote admitting not all are paying.",
+      "issues": [
+        "logo_soup",
+        "buried_caveat"
+      ],
+      "visibleText": "Our customers\nNORTHWIND\nLUMEN PAY\nARCADIA\nBRIGHTSIDE\nHALLOWAY\nVERTEX ONE\nMERIDIAN\nCASTLEGATE\n*includes pilots, trials and design partners; not all are paying\n5",
+      "numbers": [],
+      "verdict": "weak",
+      "evidence": "Title says \"Our customers\" above eight equal name tiles with no pay/pilot distinction; the only qualifier is the tiny bottom-left footnote \"*includes pilots, trials and design partners; not all are paying.\""
+    },
+    {
+      "slideNumber": 6,
+      "detectedSection": "market",
+      "purpose": "Show a large addressable market and that a small share yields a big business.",
+      "landsAs": "A classic top-down TAM slide: $50B with no source and the familiar 1% = $500M claim.",
+      "issues": [
+        "top_down_tam",
+        "no_source"
+      ],
+      "visibleText": "Market\n$50B\nglobal fraud prevention spend\nCapturing just 1% of this market is a $500M revenue business.\n6",
+      "numbers": [
+        {
+          "label": "global fraud prevention spend",
+          "value": "$50B"
+        },
+        {
+          "label": "market share captured",
+          "value": "1%"
+        },
+        {
+          "label": "implied revenue business",
+          "value": "$500M"
+        }
+      ],
+      "verdict": "weak",
+      "evidence": "The slide states '$50B global fraud prevention spend' with no citation, then explicitly sizes opportunity as 'Capturing just 1% of this market is a $500M revenue business' with no bottom-up build from customers or price."
+    },
+    {
+      "slideNumber": 7,
+      "detectedSection": "team",
+      "purpose": "Present the founding team’s complementary expertise in payments, ML, and enterprise GTM to establish credibility.",
+      "landsAs": "A dense wall of prose that cannot be scanned in four seconds and names no people, companies, or concrete achievements.",
+      "issues": [
+        "text_wall"
+      ],
+      "visibleText": "Team\n\nOur founding team brings together deep, complementary expertise across payments infrastructure, machine learning systems and enterprise go-to-market motions, with a shared history of shipping mission-critical systems at scale in high-regulation environments. Our CEO spent six years at a leading payments company where they led fraud detection initiatives spanning real-time scoring, chargeback mitigation and merchant risk tooling, and worked closely with cross-functional stakeholders across risk, engineering and compliance to deliver measurable reductions in fraud loss rates. Our CTO previously architected distributed low-latency systems and brings a rigorous engineering philosophy focused on reliability, observability and operational excellence. Together the team has built and scaled systems handling significant transaction volumes and has developed a nuanced understanding of the operational, technical and organisational challenges inherent in deploying real-time decisioning infrastructure inside large financial institutions and high-growth fintech companies.\n\n7",
+      "numbers": [
+        {
+          "label": "slide number",
+          "value": "7"
+        },
+        {
+          "label": "CEO tenure at prior payments company",
+          "value": "six years"
+        }
+      ],
+      "verdict": "weak",
+      "evidence": "The entire body is one unbroken multi-sentence paragraph with no names, logos, titles beyond CEO/CTO, or bullet structure—unreadable at a glance as a team slide."
+    },
+    {
+      "slideNumber": 8,
+      "detectedSection": "ask",
+      "purpose": "State the seed raise amount, runway, current traction, and planned use of funds.",
+      "landsAs": "A clean, scannable ask: $3M for 18 months to hire six people and grow from 8 to 100 paying customers.",
+      "issues": [],
+      "visibleText": "The ask\n$3M  18mo  8\nseed round  runway  paying customers today\nFunds hiring four engineers and two go-to-market hires to reach 100 paying customers.\n8",
+      "numbers": [
+        {
+          "label": "seed round",
+          "value": "$3M"
+        },
+        {
+          "label": "runway",
+          "value": "18mo"
+        },
+        {
+          "label": "paying customers today",
+          "value": "8"
+        },
+        {
+          "label": "target paying customers",
+          "value": "100"
+        },
+        {
+          "label": "engineers to hire",
+          "value": "four"
+        },
+        {
+          "label": "go-to-market hires",
+          "value": "two"
+        },
+        {
+          "label": "slide number",
+          "value": "8"
+        }
+      ],
+      "verdict": "strong",
+      "evidence": "Large labeled metrics ($3M seed round, 18mo runway, 8 paying customers today) plus one clear use-of-funds sentence; no charts, walls of text, or missing labels."
+    }
+  ],
+  "redFlags": [
+    {
+      "rank": 1,
+      "summary": "Traction is optical: logo soup + unlabeled 40% curve, while ask slide quietly admits only 8 paying",
+      "slideNumbers": [
+        4,
+        5,
+        8
+      ],
+      "whyItMatters": "At seed, credible paying demand is the main de-risking signal; inflating with pilots and unscaled charts wastes the meeting and usually means retention/revenue won't hold up."
+    },
+    {
+      "rank": 2,
+      "summary": "No competition slide in a crowded real-time fraud knife-fight",
+      "slideNumbers": [],
+      "whyItMatters": "Fraud scoring has entrenched players (Forter, Sift, Riskified, Stripe Radar, bank in-house). If they can't name who they lose to and why they win, they don't have a wedge."
+    },
+    {
+      "rank": 3,
+      "summary": "Team slide is an unscannable prose block with no names, prior companies, or proof points",
+      "slideNumbers": [
+        7
+      ],
+      "whyItMatters": "Seed is a bet on founders; if the deck won't even name them or show domain reps, either the team is weak or they're hiding it."
+    },
+    {
+      "rank": 4,
+      "summary": "Lazy unsourced $50B TAM with '1% = $500M' and no price or bottom-up",
+      "slideNumbers": [
+        6
+      ],
+      "whyItMatters": "Signals they haven't done customer-level math on ACV, attach, or winnable ICP — bad predictor of capital efficiency on a $3M raise."
+    },
+    {
+      "rank": 5,
+      "summary": "Slide 1 one-liner doesn't match the product the rest of the deck describes",
+      "slideNumbers": [
+        1,
+        3
+      ],
+      "whyItMatters": "Generic 'AI intelligence platform' framing usually means weak positioning and a deck assembled before they knew what they sell."
+    }
+  ],
+  "priors": [],
+  "caseForNo": "Skip this one. Traction is mostly optics: slide 4 leads with “12 design partners” and a 40% WoW curve on an unlabeled axis, while slide 5’s logo grid is footnoted as pilots/trials and slide 8 admits only 8 paying customers today. Market is the usual unsourced $50B → “1% = $500M” on slide 6, team is an unscannable prose block with no names or proof points (slide 7), and there’s no competition slide at all. Real-time fraud scoring is a crowded knife-fight; this deck doesn’t show me why they win it.",
+  "plannedProbes": [
+    {
+      "id": "probe-1",
+      "topic": "paying vs logos",
+      "question": "Slide 5 titles eight logos 'Our customers' with a footnote that includes pilots and design partners, and slide 8 says eight paying today — are those the same eight, or how many of the logos on five are actually paying, and what are they paying?",
+      "origin": "contradiction",
+      "priority": 1,
+      "resolved": "unasked",
+      "slideRef": 5
+    },
+    {
+      "id": "probe-2",
+      "topic": "unlabeled volume curve",
+      "question": "The slide 4 curve is labeled volume scored but has no y-axis numbers and no time markers — what was weekly volume at the left edge versus now, over how many weeks, and is that 40% on a base near the eight paying accounts?",
+      "origin": "slide",
+      "priority": 2,
+      "resolved": "unasked",
+      "slideRef": 4
+    },
+    {
+      "id": "probe-3",
+      "topic": "competition and losses",
+      "question": "There's no competition slide — when a prospect doesn't buy you, who do they go with instead, and can you walk me through the last two deals you lost and why?",
+      "origin": "missing",
+      "priority": 3,
+      "resolved": "unasked"
+    },
+    {
+      "id": "probe-4",
+      "topic": "team identity",
+      "question": "Slide 7 is a paragraph with no names — who exactly are the CEO and CTO, where did they work last, and what have either of you shipped in payments or fraud before this?",
+      "origin": "slide",
+      "priority": 4,
+      "resolved": "unasked",
+      "slideRef": 7
+    },
+    {
+      "id": "probe-5",
+      "topic": "8 to 100 path",
+      "question": "You're asking for $3M to go from 8 to 100 paying customers in 18 months — what's average ACV, what's the sales motion, and how many of the current eight expanded or churned?",
+      "origin": "slide",
+      "priority": 5,
+      "resolved": "unasked",
+      "slideRef": 8
+    },
+    {
+      "id": "probe-6",
+      "topic": "positioning mismatch",
+      "question": "Slide 1 calls this an AI intelligence platform for modern teams, but every other slide is pre-settlement payment scoring under 200ms — why lead with the generic line, and is the product broader than fraud or not?",
+      "origin": "contradiction",
+      "priority": 6,
+      "resolved": "unasked",
+      "slideRef": 1
+    }
+  ],
+  "initialPosture": "looking_for_the_no",
+  "postureReason": "Colleague's decline case matches what I see: traction optics, no competition story, anonymous team, and lazy TAM in a brutal category — I expect to pass unless they demolish the paying-customer and win-rate questions in the first ten minutes.",
+  "deckScore": {
+    "comprehension": 3,
+    "coverage": 3,
+    "honestyOfVisuals": 3,
+    "substantiation": 4,
+    "internalConsistency": 1,
+    "density": 4
+  },
+  "cost": {
+    "seconds": 91.426,
+    "calls": 26,
+    "promptTokens": 67952,
+    "completionTokens": 5262
+  }
+}

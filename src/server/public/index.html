@@ -389,13 +389,29 @@ $('briefbtn').onclick = async () => {
   }
 };
 
-$('sample').onclick = async () => {
+$('sample').onclick = async (event) => {
   if (busy) return;
+  // Shift-click forces the full ~78s pipeline; a plain click uses the
+  // precomputed memo so a live demo doesn't stall.
+  if (event.shiftKey) {
+    try {
+      const sample = await call('/api/sample-deck');
+      await runPreRead(sample.filename, sample.data);
+    } catch (error) { showError(error.message); }
+    return;
+  }
+  setBusy(true); showError(null);
   try {
-    const sample = await call('/api/sample-deck');
-    await runPreRead(sample.filename, sample.data);
+    const result = await call('/api/sample-preread');
+    memoId = result.memoId;
+    memo = result.memo;
+    $('decklabel').textContent = '↻ deck';
+    $('deckname').textContent = 'sentinel-seed-deck.pdf';
+    renderMemoStandalone(memo);
   } catch (error) {
     showError(error.message);
+  } finally {
+    setBusy(false);
   }
 };
 
@@ -666,6 +682,7 @@ function renderMemoStandalone(m) {
       </div>
       <p style="font-size:13px;color:var(--dim);margin-bottom:18px">
         What the investor thought before you said a word. Pick a profile and start when ready.
+        <span style="color:var(--faint)">Shift-click “sample deck” to re-run the full five-pass pre-read live (~80s).</span>
       </p>
       <div style="margin-bottom:18px">
         <span class="posture ${m.initialPosture}">${POSTURE_LABEL[m.initialPosture]}</span>

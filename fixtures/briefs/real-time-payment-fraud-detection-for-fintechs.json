@@ -1,0 +1,166 @@
+{
+  "id": "brief_1786243732789",
+  "category": "real-time payment fraud detection for fintechs",
+  "competitors": [
+    "Sift",
+    "Forter",
+    "Sardine",
+    "Riskified"
+  ],
+  "refreshedAt": "2026-08-09T02:48:52.789Z",
+  "events": [
+    {
+      "type": "raise",
+      "company": "Sardine",
+      "when": "Feb 2025",
+      "summary": "Series C led by Activant Capital with a16z and GV participation; total funding ~$145M and valuation references around $660–680M. Positioned as real-time AI risk/fraud/compliance for fintechs and banks.",
+      "reception": "mixed",
+      "sourceUrls": [
+        "https://x.com/soupsranjan/status/1889307253452456232",
+        "https://x.com/tbuzzdaily/status/1891822230188724575"
+      ],
+      "amount": "$70M"
+    }
+  ],
+  "objectionThemes": [
+    {
+      "theme": "the tools compress the work, they don't eliminate it",
+      "frequency": 4,
+      "severity": 5,
+      "investorQuestion": "Every real-time AI fraud pitch promises fewer alerts and faster response, then the customer's team becomes the bottleneck tuning models, triaging output, and explaining false positives to leadership. After you go live, who is still sitting in the loop, and what does that ongoing cost look like on their side?",
+      "quotes": [
+        {
+          "text": "AI-powered security tools keep getting announced with the same claim: fewer alerts, faster response. The operational reality is that someone still has to tune the models, triage the outputs, and explain false positives to leadership. The tools compress the work. They do not eliminate it. Detection engineering teams are becoming the bottleneck.",
+          "url": "https://x.com/blancoskhim/status/2085593375282020730"
+        },
+        {
+          "text": "Rule-based fraud detection asks: does this match a known fraud pattern? AI asks: is this consistent with how this specific cardholder actually behaves? Individual behavioral modeling, graph analysis for fraud rings, and the false positive problem that makes this harder than it looks.",
+          "url": "https://x.com/iamjustape/status/2074080163772731490"
+        }
+      ],
+      "triggeredBy": [
+        "Sardine",
+        "Sift",
+        "Forter",
+        "Riskified"
+      ]
+    },
+    {
+      "theme": "velocity checks are still surprisingly underdeployed",
+      "frequency": 4,
+      "severity": 4,
+      "investorQuestion": "Velocity checks have been in the public literature since the 1990s and still don't ship at a lot of places because of basic data plumbing. When a buyer already knows the checklist, what have you actually built on the real-time path that isn't the same signals every competent fraud team already wishes they had?",
+      "quotes": [
+        {
+          "text": "Now, velocity checks have been implemented in some places for about 50 years and appear in public literature since at least the 1990s. And yet many places do not implement velocity checks, in some places because of technical difficulty.",
+          "url": "https://x.com/patio11/status/2083259131293491225"
+        },
+        {
+          "text": "You might wonder “Wait, why in a world where SQL exists do you have difficulty calculating how many times a particular identifier has transacted over the last 60 seconds, 60 minutes, 24 hours, etc.” And that’s a fun interview question in some places.",
+          "url": "https://x.com/patio11/status/2083259410223157257"
+        },
+        {
+          "text": "What’s the sort of thing you would lead with in a conversation about fraud signals? Velocity checks. Very well-understood, not considered sensitive, surprisingly underdeployed because of IT issues among other things.",
+          "url": "https://x.com/patio11/status/2083257859802828967"
+        }
+      ],
+      "triggeredBy": [
+        "Sardine",
+        "Sift",
+        "Forter",
+        "Riskified"
+      ]
+    },
+    {
+      "theme": "backend detection misses point-of-compromise fraud",
+      "frequency": 3,
+      "severity": 5,
+      "investorQuestion": "When the card number, PIN, and amount all look valid on the rails, a real-time model has almost nothing to fire on. How do you catch fraud that never looks fraudulent in the payment message itself—cloned credentials, correct PIN, normal amount—and what signal do you have that the issuer or network doesn't already see?",
+      "quotes": [
+        {
+          "text": "Here’s why this fraud is so hard to catch: NIBSS sees a valid card number, a valid PIN, a normal transaction amount. Nothing about it looks fraudulent on the rails. Your bank approves it because every signal checks out. The compromise didn’t happen on the network. It happened at the point of contact. No amount of backend fraud detection catches a cloned card with the correct PIN.",
+          "url": "https://x.com/smartnakamoura/status/2066457369215631648"
+        }
+      ],
+      "triggeredBy": [
+        "Sardine",
+        "Sift",
+        "Forter",
+        "Riskified"
+      ]
+    },
+    {
+      "theme": "per-event vendor pricing becomes uneconomical",
+      "frequency": 3,
+      "severity": 4,
+      "investorQuestion": "We've seen fraud vendors charge per login or per verification API call and blow up unit economics once real auth volume hits—especially when customers log in twenty-plus times before they transact. What is your pricing under realistic login-to-purchase ratios, and when does the customer start eating the cost or passing it through?",
+      "quotes": [
+        {
+          "text": "The reason I asked this is because sometime ago when we were implementing a fraud system for one of the banks, the fraud system supplier was charging the bank for every login. When we ran the numbers, the average customer was logging in 25 times before they even transacted. That pricing model obviously became uneconomical.",
+          "url": "https://x.com/Rendani666/status/2050582578529226884"
+        }
+      ],
+      "triggeredBy": [
+        "Sardine",
+        "Sift",
+        "Forter",
+        "Riskified"
+      ]
+    },
+    {
+      "theme": "incentive conflict — they optimise their chargebacks, not total harm",
+      "frequency": 3,
+      "severity": 4,
+      "investorQuestion": "Payment and fraud intermediaries earn on volume and optimise against their own chargebacks and liability, not total harm to end users. If your model or guarantee is aligned to the intermediary's P&L, what stops you from approving fraud that is cheap for them and expensive for everyone else—and how do you prove effectiveness beyond their chargeback rate?",
+      "quotes": [
+        {
+          "text": "PayPal illustrates the same incentive conflict. A payment provider earns from transaction volume and therefore benefits from fast, low-friction access. It will monitor fraud—but it optimises against its own chargebacks, liability, compliance costs, reputational damage, and lost transactions. That is not necessarily the level of control that minimises total harm to consumers and society. The intermediary keeps the fees; victims and public authorities absorb much of the remaining damage.",
+          "url": "https://x.com/csFraudAnalysis/status/2084554278987792396"
+        },
+        {
+          "text": "...the craziest part of this report to me was the admission that no agreed-upon metrics exist to measure the effectiveness of these anti-financial crime programs (KYC/AML policies). So, these regulators require all these institutions to implement expensive KYC/AML policies to prevent financial crimes, but they don't even measure their effectiveness.",
+          "url": "https://x.com/samcallah/status/1788015909497385409"
+        }
+      ],
+      "triggeredBy": [
+        "Sardine",
+        "Sift",
+        "Forter",
+        "Riskified"
+      ]
+    },
+    {
+      "theme": "you're often detecting incompetence, not fraud",
+      "frequency": 3,
+      "severity": 3,
+      "investorQuestion": "Fraud systems frequently surface operational mess—bad process, weak controls, internal incompetence—that the buying org does not want labeled as incompetence. How do you separate true external fraud from internal failure modes without creating a political black hole your champion can't act on?",
+      "quotes": [
+        {
+          "text": "As long as I’m at it: one issue with fraud detection is that sometimes the data source which you think shows obvious fraud is instead detecting incompetence which your system will resist calling incompetence because of what diagnosis would require it to do.",
+          "url": "https://x.com/patio11/status/1855074250782113888"
+        }
+      ],
+      "triggeredBy": [
+        "Sardine",
+        "Sift",
+        "Forter",
+        "Riskified"
+      ]
+    }
+  ],
+  "sources": [
+    "https://x.com/tbuzzdaily/status/1891822230188724575",
+    "https://x.com/patio11/status/1855074250782113888",
+    "https://x.com/smartnakamoura/status/2066457369215631648",
+    "https://x.com/blancoskhim/status/2085593375282020730",
+    "https://x.com/csFraudAnalysis/status/2084554278987792396",
+    "https://x.com/Rendani666/status/2050582578529226884",
+    "https://x.com/samcallah/status/1788015909497385409"
+  ],
+  "cost": {
+    "seconds": 153.425,
+    "usd": 23.240327999999998,
+    "searches": 3,
+    "toolCalls": 134
+  }
+}

@@ -156,6 +156,30 @@ const routes: Array<{
   },
 
   {
+    // The pre-read for the sample deck, precomputed and committed.
+    //
+    // Running it live takes ~78s, which is a long silence in front of an
+    // audience. A real upload still runs the full pipeline; this is the demo
+    // path, and the UI labels it as precomputed rather than pretending.
+    method: 'GET',
+    pattern: /^\/api\/sample-preread$/,
+    async handle(_req, res) {
+      try {
+        const raw = await readFile(
+          join(HERE, '..', '..', 'fixtures', 'prereads', 'planted-flaws.json'),
+          'utf8',
+        );
+        const memo = JSON.parse(raw) as PreReadMemo;
+        const memoId = `memo_sample_${Date.now()}`;
+        memos.set(memoId, memo);
+        json(res, 200, { memoId, memo, precomputed: true });
+      } catch {
+        json(res, 404, { error: 'no pre-read fixture — run: npm run preread -- <deck> --save' });
+      }
+    },
+  },
+
+  {
     // Upload a deck and run the pre-read. Slow by design (~40s) — it is the
     // work a real investor does before the meeting.
     method: 'POST',
@@ -212,11 +236,19 @@ const routes: Array<{
     method: 'GET',
     pattern: /^\/api\/sample-brief$/,
     async handle(_req, res) {
+      // Committed fixture first, freshly-built one second. The brief costs
+      // real money and minutes to generate, so the demo must not depend on a
+      // gitignored temp directory surviving.
+      const candidates = [
+        join(HERE, '..', '..', 'fixtures', 'briefs', 'real-time-payment-fraud-detection-for-fintechs.json'),
+        join(HERE, '..', '..', '.tmp', 'briefs', 'real-time-payment-fraud-detection-for-fintechs.json'),
+      ];
       try {
-        const raw = await readFile(
-          join(HERE, '..', '..', '.tmp', 'briefs', 'real-time-payment-fraud-detection-for-fintechs.json'),
-          'utf8',
-        );
+        let raw: string | undefined;
+        for (const path of candidates) {
+          try { raw = await readFile(path, 'utf8'); break; } catch { /* next */ }
+        }
+        if (!raw) throw new Error('no brief fixture');
         const brief = JSON.parse(raw) as CategoryBrief;
         const briefId = `brief_sample_${Date.now()}`;
         briefs.set(briefId, brief);

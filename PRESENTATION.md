@@ -554,3 +554,20 @@ contradictions from **zero to four**.
 Plus one thing learned by testing rather than assuming: `role: "system"` items are *accepted*
 but merely acknowledged (*"Understood. What's the play?"*). `role: "user"` with a bracketed
 direction actually redirects. Not documented anywhere.
+
+---
+
+## The 3-minute video
+
+Shot list, script, pre-flight and fallbacks live in **`DEMO.md`**. Four scenes:
+
+**pre-read → category brief → live voice + ledger catch → posture delta**
+
+The voice beat is 80 of the 180 seconds. That proportion *is* the argument: everything else in
+the product exists to make that one moment possible.
+
+**What got cut, and why it's worth saying out loud** — the seven profiles and the blowhard, the
+7/7 planted-flaw eval, the anti-sycophancy controls, the five-loop architecture. All good, none
+of them survive a 3-minute budget without breaking the single-session narrative. They are live-
+talk material, not video material. *Under-explaining is the point: the video's job is to make
+someone want the demo, not to transfer the design.*

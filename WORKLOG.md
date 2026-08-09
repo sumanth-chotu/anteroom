@@ -689,3 +689,66 @@ the plan. Amortised weekly across every founder in a category it is still small,
 conversion should be confirmed against the dashboard before it goes in a cost model.
 
 **Next:** presentation honesty pass, then Phase 3 scoring.
+
+---
+
+## 2026-08-08 — Demo video plan (DEMO.md)
+
+**Phase:** 2 · **Commit:** pending
+
+**What:** `DEMO.md` — shot list, voiceover script, pre-flight checklist and fallbacks for a
+**3-minute** demo video. Four scenes: pre-read → category brief → live voice + ledger catch →
+posture delta.
+
+**Why the cut is what it is.** Three minutes buys about four scenes, and the project has
+roughly ten demoable things. The triage rule was: keep only what serves the one sentence that
+has to survive — *an investor who has an opinion about you before you speak, and can prove
+where you lost them.* That puts the voice beat at 80s (44% of runtime) and everything else in
+service of it.
+
+Cut, deliberately: the seven profiles and the blowhard (best material in the project, but a
+20-second sidebar that breaks a single-session narrative — it belongs in the live talk), the
+7/7 planted-flaw eval (demoted to a two-second caption, not a scene), anti-sycophancy (seven
+controls, none of them visual — one clause of narration), and the architecture diagram.
+
+**Verified before scripting rather than assuming:** 43 tests green, typecheck clean, and the
+sample brief, fixture deck and both ws paths all present. The script quotes only output that
+already exists in `PRESENTATION.md`, so nothing in it depends on a run going well on the day.
+
+**Found while scripting — a real gap.** The category brief is wired into **text** sessions
+(`+ market`, `/api/sample-brief`, the "What this market says" panel) but not voice.
+`voice/relay.ts` already accepts `brief` on `start`; `server/public/voice.js` only ever sends
+`memo`, so the browser never passes it. Consequence for the video: the brief beat and the voice
+beat are different modes, so the brief has to be a static split-screen instead of the investor
+raising a mined category objection **out loud** mid-call. Threading `briefId` through the voice
+start path is a small change and would make a materially better demo.
+
+**Learned:** writing the script was a better audit of the product than reading the code was.
+The mode gap above is invisible in both the code and the worklog — it only shows up when you
+try to narrate one continuous user journey and find you have to cut away.
+
+**Next:** decide whether to close the voice/brief gap before recording; record fallback B
+(`npm run duo`) as insurance before attempting the live take.
+
+---
+
+## 2026-08-08 — Demo assets made durable
+
+**Phase:** — · **Commit:** pending
+
+**What:** The category brief and the sample deck's pre-read were living only in `.tmp/`, which
+is gitignored. The **+ market** and **sample deck** buttons read from there, so clearing that
+directory — or cloning the repo anywhere else — would have broken the demo with a 404.
+
+Both are now committed under `fixtures/`. The brief cost ~$23 and 153s to generate; that is not
+something to leave in a temp directory. The server prefers the committed fixture and falls back
+to a freshly-built one in `.tmp/`.
+
+**Also: the sample-deck button no longer stalls.** Running the five-pass pre-read live takes
+~78s, which is a long silence in front of an audience. A plain click now loads the precomputed
+memo instantly; **shift-click** re-runs the full pipeline for when the point *is* the pipeline.
+The UI says which one you are getting rather than pretending it computed in zero seconds.
+
+**Learned:** demo assets are production assets. Anything a live demo depends on needs the same
+durability as source — and "it works on this machine right now" is exactly the failure that only
+shows up on stage.
