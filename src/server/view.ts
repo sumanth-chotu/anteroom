@@ -166,6 +166,21 @@ export function sessionView(session: SessionState, usageAtStart: UsageSnapshot) 
           notes: metrics.roomControlNotes,
         }
       : null,
+    memo: session.memo
+      ? {
+          slideCount: session.memo.slideCount,
+          oneLinerFromSlide1: session.memo.oneLinerFromSlide1,
+          oneLinerFromFullDeck: session.memo.oneLinerFromFullDeck,
+          understood: session.memo.understood,
+          confused: session.memo.confused,
+          redFlags: session.memo.redFlags,
+          caseForNo: session.memo.caseForNo,
+          plannedProbes: session.memo.plannedProbes,
+          initialPosture: session.memo.initialPosture,
+          postureReason: session.memo.postureReason,
+          deckScore: session.memo.deckScore,
+        }
+      : null,
     usage: diffUsage(usageAtStart, snapshotUsage()),
   };
 }

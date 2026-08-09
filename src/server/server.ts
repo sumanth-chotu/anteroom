@@ -13,12 +13,23 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 
-import { createSession, founderTurn, investorTurn, type SessionState } from '../session/session.ts';
+import {
+  createSession,
+  founderTurn,
+  investorTurn,
+  probeOutcomes,
+  transcriptFor,
+  type SessionState,
+} from '../session/session.ts';
 import { PROFILES } from '../investor/profiles.ts';
+import { generatePreRead } from '../preread/preread.ts';
+import { computePostureDelta, type PostureDeltaResult } from '../preread/delta.ts';
+import type { PreReadMemo } from '../preread/types.ts';
 import { profileView, sessionView, snapshotUsage, type UsageSnapshot } from './view.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -29,9 +40,16 @@ interface Entry {
   usageAtStart: UsageSnapshot;
   /** Serializes turns per session — double-submits would corrupt engine state. */
   lock: Promise<unknown>;
+  delta?: PostureDeltaResult;
 }
 
 const sessions = new Map<string, Entry>();
+
+/** Pre-reads live for the process lifetime, keyed so a session can reference one. */
+const memos = new Map<string, PreReadMemo>();
+
+/** Decks can be a few MB of base64. Well under this; the cap is a sanity bound. */
+const MAX_UPLOAD_BYTES = 40 * 1024 * 1024;
 
 function json(res: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
@@ -45,7 +63,12 @@ function json(res: ServerResponse, status: number, body: unknown): void {
 
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.from(chunk));
+  let total = 0;
+  for await (const chunk of req) {
+    total += (chunk as Buffer).length;
+    if (total > MAX_UPLOAD_BYTES) throw new Error('Upload too large.');
+    chunks.push(Buffer.from(chunk));
+  }
   if (chunks.length === 0) return {};
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
@@ -80,11 +103,13 @@ const routes: Array<{
     async handle(req, res) {
       const body = await readJson(req);
       const profileId = typeof body['profileId'] === 'string' ? body['profileId'] : 'seed_skeptic';
+      const memoId = typeof body['memoId'] === 'string' ? body['memoId'] : undefined;
+      const memo = memoId ? memos.get(memoId) : undefined;
 
       let entry: Entry;
       try {
         entry = {
-          session: createSession(profileId),
+          session: createSession(profileId, undefined, memo),
           usageAtStart: snapshotUsage(),
           lock: Promise.resolve(),
         };
@@ -100,6 +125,73 @@ const routes: Array<{
       sessions.set(entry.session.id, entry);
 
       json(res, 201, sessionView(entry.session, entry.usageAtStart));
+    },
+  },
+
+  {
+    // The planted-flaw fixture, so a demo is one click rather than a file
+    // picker. Same code path as a real upload — it just supplies the bytes.
+    method: 'GET',
+    pattern: /^\/api\/sample-deck$/,
+    async handle(_req, res) {
+      try {
+        const bytes = await readFile(
+          join(HERE, '..', '..', 'fixtures', 'decks', 'planted-flaws', 'deck.pdf'),
+        );
+        json(res, 200, { filename: 'sentinel-seed-deck.pdf', data: bytes.toString('base64') });
+      } catch {
+        json(res, 404, { error: 'sample deck not built — run: npm run fixture:deck' });
+      }
+    },
+  },
+
+  {
+    // Upload a deck and run the pre-read. Slow by design (~40s) — it is the
+    // work a real investor does before the meeting.
+    method: 'POST',
+    pattern: /^\/api\/decks$/,
+    async handle(req, res) {
+      const body = await readJson(req);
+      const filename = typeof body['filename'] === 'string' ? body['filename'] : 'deck.pdf';
+      const data = typeof body['data'] === 'string' ? body['data'] : '';
+      if (!data) return json(res, 400, { error: 'no file data' });
+
+      const dir = await mkdtemp(join(tmpdir(), 'radar-upload-'));
+      const path = join(dir, filename.replace(/[^\w.\-]/g, '_'));
+      await writeFile(path, Buffer.from(data, 'base64'));
+
+      try {
+        const { memo } = await generatePreRead(path);
+        const memoId = `memo_${memos.size + 1}_${Date.now()}`;
+        memos.set(memoId, memo);
+        json(res, 201, { memoId, memo });
+      } catch (error) {
+        json(res, 400, { error: error instanceof Error ? error.message : 'pre-read failed' });
+      }
+    },
+  },
+
+  {
+    // Re-assess after the meeting and diff against the pre-read.
+    method: 'POST',
+    pattern: /^\/api\/sessions\/([\w-]+)\/delta$/,
+    async handle(_req, res, [id]) {
+      const entry = sessions.get(id ?? '');
+      if (!entry) return json(res, 404, { error: 'no such session' });
+      if (!entry.session.memo) return json(res, 400, { error: 'session has no deck' });
+      if (!entry.session.turns.some((t) => t.role === 'founder')) {
+        return json(res, 400, { error: 'nothing said yet' });
+      }
+
+      try {
+        const delta = await withLock(entry, () =>
+          computePostureDelta(entry.session.memo!, transcriptFor(entry.session)),
+        );
+        entry.delta = delta;
+        json(res, 200, { delta, probes: probeOutcomes(entry.session) });
+      } catch (error) {
+        json(res, 500, { error: error instanceof Error ? error.message : 'delta failed' });
+      }
     },
   },
 

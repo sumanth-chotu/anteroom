@@ -19,9 +19,11 @@ import { basename, resolve } from 'node:path';
 import { openInput } from './input.ts';
 import { generatePreRead } from '../preread/preread.ts';
 import { POSTURE_LABEL, type PreReadMemo } from '../preread/types.ts';
+import { computePostureDelta } from '../preread/delta.ts';
 import {
   createSession,
   probeOutcomes,
+  transcriptFor,
   founderTurn,
   investorTurn,
   isComplete,
@@ -230,6 +232,40 @@ if (metrics.chaotic) {
         `followed ${C.red(String(metrics.followed))}  →  ${colour(`${score}%`)}`,
     );
     for (const note of metrics.roomControlNotes) console.log(C.grey(`    · ${note}`));
+  }
+}
+
+// ── posture delta ────────────────────────────────────────────────────────────
+if (session.memo && session.turns.some((t) => t.role === 'founder')) {
+  process.stdout.write(C.dim('  re-reading my notes…\r'));
+  const delta = await computePostureDelta(session.memo, transcriptFor(session));
+  process.stdout.write(' '.repeat(30) + '\r');
+
+  const arrow = delta.direction > 0 ? C.green('↑') : delta.direction < 0 ? C.red('↓') : C.dim('→');
+  console.log(`\n${C.bold('  How the meeting moved me')}`);
+  console.log(
+    `    ${C.dim(POSTURE_LABEL[delta.initialPosture])} ${arrow} ` +
+      `${C.bold(POSTURE_LABEL[delta.finalPosture])}`,
+  );
+  console.log(C.grey(`    ${delta.finalPostureReason}`));
+
+  const MARK = { concern: C.red('●'), neutral: C.dim('●'), strength: C.green('●') };
+  console.log();
+  for (const d of delta.dimensions) {
+    const moved = d.preRead !== d.postMeeting;
+    console.log(
+      `    ${MARK[d.preRead]}${C.dim('→')}${MARK[d.postMeeting]} ${moved ? C.bold(d.dimension) : d.dimension}`,
+    );
+    console.log(C.grey(`        ${d.whatChanged}`));
+  }
+
+  if (delta.fixedInTheRoom.length) {
+    console.log(`\n    ${C.green('Fixed in the room')}`);
+    for (const item of delta.fixedInTheRoom) console.log(C.grey(`      + ${item}`));
+  }
+  if (delta.madeWorse.length) {
+    console.log(`\n    ${C.red('Made worse')}`);
+    for (const item of delta.madeWorse) console.log(C.grey(`      - ${item}`));
   }
 }
 

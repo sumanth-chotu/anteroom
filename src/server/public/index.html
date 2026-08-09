@@ -155,6 +155,49 @@
   table.ledger td.v { color: var(--text); text-align: right; white-space: nowrap; }
 
   .empty { color: var(--faint); font-size: 12px; font-style: italic; }
+
+  /* ── pre-read + delta ── */
+  .posture {
+    display: inline-block; font: 700 10px/1 var(--mono); letter-spacing: .1em;
+    text-transform: uppercase; padding: 4px 8px; border-radius: 4px;
+  }
+  .posture.leaning_in         { color: var(--green);  background: #122b1c; }
+  .posture.neutral            { color: var(--dim);    background: #1e232b; }
+  .posture.skeptical          { color: var(--amber);  background: #322610; }
+  .posture.looking_for_the_no { color: var(--red);    background: #351717; }
+
+  .oneliner { font-size: 12px; line-height: 1.5; margin: 4px 0 10px; }
+  .oneliner .lab { font: 10px/1 var(--mono); color: var(--faint); letter-spacing: .06em; }
+  .oneliner .q { color: var(--text); font-style: italic; }
+
+  .flag { display: flex; gap: 8px; font-size: 12px; line-height: 1.45; margin-bottom: 9px; }
+  .flag .n { color: var(--red); font: 700 11px/1.5 var(--mono); flex: none; }
+
+  .nocase {
+    font-size: 12px; line-height: 1.55; color: var(--amber);
+    background: #241c0c; border-left: 2px solid var(--amber);
+    padding: 9px 11px; border-radius: 0 5px 5px 0;
+  }
+
+  .probe { font-size: 12px; line-height: 1.45; margin-bottom: 9px; display: flex; gap: 8px; }
+  .probe .mk { flex: none; font: 700 11px/1.5 var(--mono); }
+  .probe.satisfied .mk { color: var(--green); }
+  .probe.dodged    .mk { color: var(--red); }
+  .probe.unasked   .mk { color: var(--faint); }
+  .probe .qt { color: var(--dim); font-style: italic; }
+
+  .dim-row { display: flex; gap: 8px; align-items: baseline; font-size: 12px; margin-bottom: 8px; }
+  .dot { font-size: 11px; }
+  .dot.concern { color: var(--red); } .dot.neutral { color: var(--faint); } .dot.strength { color: var(--green); }
+  .dim-row .what { color: var(--faint); font-size: 11px; line-height: 1.45; }
+
+  .uploader { display: flex; gap: 8px; align-items: center; }
+  .uploader label {
+    font-size: 12px; color: var(--dim); cursor: pointer;
+    border: 1px dashed var(--line); border-radius: 6px; padding: 6px 11px;
+  }
+  .uploader label:hover { border-color: var(--accent); color: var(--text); }
+  .uploader .name { font: 11px/1 var(--mono); color: var(--green); }
   .err { color: var(--red); font-size: 12px; padding: 8px 26px; }
   .spinner { display: inline-block; width: 9px; color: var(--faint); font-family: var(--mono); }
 </style>
@@ -164,8 +207,15 @@
 <header>
   <div class="brand">RADAR <span>seed pitch practice · testing UI</span></div>
   <div class="spacer"></div>
+  <div class="uploader">
+    <label for="deck" id="decklabel">+ deck</label>
+    <input type="file" id="deck" accept=".pdf,.pptx,.ppt,.png,.jpg,.jpeg" hidden>
+    <button id="sample" title="Load the planted-flaw fixture deck">sample</button>
+    <span class="name" id="deckname"></span>
+  </div>
   <select id="profile"></select>
   <button id="start" class="primary">New session</button>
+  <button id="debrief" disabled>Debrief</button>
   <button id="export" disabled>Export</button>
 </header>
 
@@ -196,6 +246,10 @@ const pct = (n) => `${Math.round((n ?? 0) * 100)}%`;
 
 let sessionId = null;
 let busy = false;
+let memoId = null;
+let memo = null;
+let delta = null;
+let probeOutcomes = null;
 
 // ── profiles ────────────────────────────────────────────────────────────────
 const KIND_ORDER = { synthetic: 0, derived: 1, character: 2 };
@@ -242,6 +296,58 @@ async function call(url, options) {
   return body;
 }
 
+// ── deck upload → pre-read ──────────────────────────────────────────────────
+async function runPreRead(filename, data) {
+  setBusy(true); showError(null);
+  $('deckname').textContent = '';
+  $('decklabel').textContent = `reading ${filename}…`;
+  $('scroll').innerHTML =
+    '<p class="empty" style="padding:40px 0;text-align:center">' +
+    'The investor is reading your deck<span class="spinner">…</span><br>' +
+    '<span style="font-size:11px">Five passes. Takes about a minute.</span></p>';
+
+  try {
+    const result = await call('/api/decks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, data }),
+    });
+    memoId = result.memoId;
+    memo = result.memo;
+    $('decklabel').textContent = '↻ deck';
+    $('deckname').textContent = filename;
+    renderMemoStandalone(memo);
+  } catch (error) {
+    showError(error.message);
+    $('decklabel').textContent = '+ deck';
+    $('scroll').innerHTML = '';
+  } finally {
+    setBusy(false);
+  }
+}
+
+$('deck').onchange = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const data = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  await runPreRead(file.name, data);
+};
+
+$('sample').onclick = async () => {
+  if (busy) return;
+  try {
+    const sample = await call('/api/sample-deck');
+    await runPreRead(sample.filename, sample.data);
+  } catch (error) {
+    showError(error.message);
+  }
+};
+
 $('start').onclick = async () => {
   setBusy(true); showError(null);
   $('scroll').innerHTML = '<p class="empty" style="padding:40px 0;text-align:center">Opening the meeting<span class="spinner">…</span></p>';
@@ -249,10 +355,12 @@ $('start').onclick = async () => {
     const view = await call('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profileId: $('profile').value }),
+      body: JSON.stringify({ profileId: $('profile').value, memoId }),
     });
     sessionId = view.id;
+    delta = null; probeOutcomes = null;
     $('export').disabled = false;
+    $('debrief').disabled = !memoId;
     render(view);
   } catch (error) {
     showError(error.message);
@@ -286,6 +394,56 @@ $('answer').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
 });
 $('export').onclick = () => { if (sessionId) location.href = `/api/sessions/${sessionId}/export`; };
+
+$('debrief').onclick = async () => {
+  if (!sessionId || busy) return;
+  setBusy(true); showError(null);
+  $('debrief').textContent = 'Re-reading…';
+  try {
+    const result = await call(`/api/sessions/${sessionId}/delta`, { method: 'POST' });
+    delta = result.delta;
+    probeOutcomes = result.probes;
+    render(await call(`/api/sessions/${sessionId}`));
+    $('panel').scrollTop = 0;
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    $('debrief').textContent = 'Debrief';
+    setBusy(false);
+  }
+};
+
+const POSTURE_LABEL = {
+  leaning_in: 'Leaning in', neutral: 'Neutral',
+  skeptical: 'Skeptical', looking_for_the_no: 'Looking for the no',
+};
+
+/** Memo shown on its own after upload, before any session exists. */
+function renderMemoStandalone(m) {
+  $('scroll').innerHTML = `
+    <div style="max-width:64ch">
+      <div style="font:600 10px/1 var(--mono);letter-spacing:.14em;color:var(--faint);margin-bottom:14px">
+        PRE-READ MEMO · ${m.slideCount} SLIDES
+      </div>
+      <p style="font-size:13px;color:var(--dim);margin-bottom:18px">
+        What the investor thought before you said a word. Pick a profile and start when ready.
+      </p>
+      <div style="margin-bottom:18px">
+        <span class="posture ${m.initialPosture}">${POSTURE_LABEL[m.initialPosture]}</span>
+        <div style="font-size:12px;color:var(--dim);margin-top:8px">${esc(m.postureReason)}</div>
+      </div>
+      <div class="nocase" style="margin-bottom:20px">${esc(m.caseForNo)}</div>
+      <div style="font:600 10px/1 var(--mono);letter-spacing:.14em;color:var(--faint);margin-bottom:10px">
+        WHAT THEY'LL ASK YOU
+      </div>
+      ${m.plannedProbes.map((p) => `
+        <div class="probe unasked">
+          <span class="mk">${p.priority}</span>
+          <span><b>${esc(p.topic)}</b>${p.slideRef ? ` <span style="color:var(--faint)">slide ${p.slideRef}</span>` : ''}
+            <div class="qt">“${esc(p.question)}”</div></span>
+        </div>`).join('')}
+    </div>`;
+}
 
 // Optimistic echo so the transcript doesn't stall while the model thinks.
 function appendPending(text) {
@@ -380,6 +538,52 @@ function renderPanel(view) {
       </div>
       ${p.persona ? `<div class="disclaimer">${esc(p.persona.disclaimer)}</div>` : ''}
     </section>
+
+    ${delta ? `
+    <section>
+      <h2>How the meeting moved them</h2>
+      <div style="margin-bottom:12px">
+        <span class="posture ${delta.initialPosture}">${POSTURE_LABEL[delta.initialPosture]}</span>
+        <span style="color:var(--faint);margin:0 6px">${delta.direction > 0 ? '↑' : delta.direction < 0 ? '↓' : '→'}</span>
+        <span class="posture ${delta.finalPosture}">${POSTURE_LABEL[delta.finalPosture]}</span>
+      </div>
+      <div style="font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:14px">${esc(delta.finalPostureReason)}</div>
+      ${delta.dimensions.map((d) => `
+        <div class="dim-row">
+          <span><span class="dot ${d.preRead}">●</span><span style="color:var(--faint)">→</span><span class="dot ${d.postMeeting}">●</span></span>
+          <span><b>${esc(d.dimension)}</b><div class="what">${esc(d.whatChanged)}</div></span>
+        </div>`).join('')}
+      ${delta.fixedInTheRoom.length ? `
+        <div style="margin-top:12px"><h2 style="color:var(--green)">Fixed in the room</h2>
+        ${delta.fixedInTheRoom.map((x) => `<div class="what" style="margin-bottom:5px">+ ${esc(x)}</div>`).join('')}</div>` : ''}
+      ${delta.madeWorse.length ? `
+        <div style="margin-top:12px"><h2 style="color:var(--red)">Made worse</h2>
+        ${delta.madeWorse.map((x) => `<div class="what" style="margin-bottom:5px">− ${esc(x)}</div>`).join('')}</div>` : ''}
+    </section>` : ''}
+
+    ${view.memo ? `
+    <section>
+      <h2>Pre-read</h2>
+      <div style="margin-bottom:10px"><span class="posture ${view.memo.initialPosture}">${POSTURE_LABEL[view.memo.initialPosture]}</span></div>
+      <div class="oneliner">
+        <div class="lab">SLIDE 1 SAYS</div><div class="q">“${esc(view.memo.oneLinerFromSlide1)}”</div>
+      </div>
+      <div class="oneliner">
+        <div class="lab">THE WHOLE DECK SAYS</div><div class="q">“${esc(view.memo.oneLinerFromFullDeck)}”</div>
+      </div>
+      <h2 style="margin-top:14px">What bothered them</h2>
+      ${view.memo.redFlags.slice(0, 4).map((f) => `
+        <div class="flag"><span class="n">${f.rank}</span><span>${esc(f.summary)}</span></div>`).join('')}
+      <h2 style="margin-top:14px">The case for passing</h2>
+      <div class="nocase">${esc(view.memo.caseForNo)}</div>
+      ${probeOutcomes ? `
+        <h2 style="margin-top:14px">What they came in wanting to ask</h2>
+        ${probeOutcomes.map((p) => `
+          <div class="probe ${p.resolved}">
+            <span class="mk">${p.resolved === 'satisfied' ? '✓' : p.resolved === 'dodged' ? '✗' : '·'}</span>
+            <span>${esc(p.topic)}${p.resolved === 'dodged' ? ' <span style="color:var(--red)">— never answered</span>' : p.resolved === 'unasked' ? ' <span style="color:var(--faint)">— never reached</span>' : ''}</span>
+          </div>`).join('')}` : ''}
+    </section>` : ''}
 
     <section class="spine">
       <h2>Coverage</h2>

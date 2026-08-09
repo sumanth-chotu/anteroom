@@ -187,6 +187,19 @@ export function probeOutcomes(session: SessionState) {
   });
 }
 
+/** Transcript with elapsed-time stamps, so the delta can cite moments. */
+export function transcriptFor(session: SessionState) {
+  const start = session.turns[0]?.at ?? Date.now();
+  return session.turns.map((t) => {
+    const secs = Math.max(0, Math.round((t.at - start) / 1000));
+    return {
+      role: t.role,
+      text: t.text,
+      stamp: `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`,
+    };
+  });
+}
+
 export function isComplete(session: SessionState): boolean {
   const probesLeft = probeOutcomes(session).some((p) => p.resolved === 'unasked');
   return coverageReport(session.engine).unasked.length === 0 && !probesLeft;

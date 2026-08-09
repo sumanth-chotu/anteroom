@@ -386,3 +386,46 @@ on kind + metrics, which are stable across revisions. Two tests encode it.
 Posture came out `LOOKING FOR THE NO` on the deliberately weak fixture, which is correct.
 
 **Next:** deck upload + memo panel in the UI, then the posture delta (§6.6).
+
+---
+
+## 2026-08-08 — Phase 1c: posture delta + deck UI. Phase 1 complete.
+
+**Phase:** 1 · **Commit:** pending
+
+**What:** `preread/delta.ts`, deck upload and memo/delta rendering in the UI, and a one-click
+sample deck.
+
+**The posture delta** re-runs the assessment after the meeting and diffs it against the
+pre-read: per-dimension `concern → strength` transitions, `fixedInTheRoom`, `madeWorse`, and an
+overall posture shift with direction.
+
+**Isolated like the grader** (PLAN.md §9.1) — the delta call never sees the persona prompt or
+any instruction about being encouraging. It sees the memo and the transcript, nothing about how
+the investor was told to behave.
+
+**It moves in both directions, which is the point.** On a run where the founder gave real
+numbers, `team` went concern → strength on the strength of one sentence, while four other things
+got worse. A delta that only ever darkens would be as broken as one that only brightens.
+
+The prompt explicitly permits an empty `fixedInTheRoom` and requires "never came up" to be
+reported as its own outcome — a concern that was never addressed is a missed opportunity, not a
+resolution, and blurring those is exactly the miscalibration this product exists to prevent.
+
+**UI:** deck upload (base64 JSON — multipart needs a dependency and buys nothing here), the memo
+rendered standalone before a session exists, and the delta in the panel after Debrief. Added
+`GET /api/sample-deck` serving the fixture so a demo is one click instead of a file picker —
+same code path as a real upload, it just supplies the bytes.
+
+**Learned:** the UI script is an ES module, so its scope is not reachable from the browser
+console. Rather than expose internals for testability, the sample-deck endpoint turned out to be
+the better answer — it made the flow verifiable *and* made the demo one click. Test pressure
+producing a real feature rather than a test hook.
+
+**Measured:** pre-read over HTTP end to end — **78s**, 8 slides, 6 probes, 5 red flags, 24 deck
+claims. Delta ~25s.
+
+**Phase 1 is done.** Deck ingestion, per-slide vision, one-liner test, deck score, five-pass
+pre-read, seeded ledger, planned probes, posture, posture delta, and UI for all of it.
+
+**Next:** Phase 2 — the voice loop. WS relay, `grok-voice-latest`, barge-in.

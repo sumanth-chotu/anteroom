@@ -416,3 +416,41 @@ the founder joins.
 against the new claim with a fresh key — and asked the same question again three turns later.
 **An investor who repeats a question reads as not listening**, the one thing they never do.
 Fixed by keying on metrics, which are stable across revisions.
+
+---
+
+## Slide: the posture delta — what you fixed, what you made worse
+
+Re-run the investor's assessment after the meeting, diff it against the pre-read. Real output:
+
+> **SKEPTICAL ↓ LOOKING FOR THE NO**
+> *"The only live diligence thread — paid demand — moved from an already-soft '8 paying' to
+> 4 × $4k and an immediate headcount contradiction, so traction is less bankable than before the
+> meeting."*
+>
+> ● → ● **paid customers / traction credibility**
+> *Got worse: founder cut '8 paying' to 'four of the twelve pay us', then on the next beat could
+> not reconcile whether design partners were 12 or 8 when challenged.*
+>
+> ● → ● **team** — *never came up*
+
+**It moves in both directions.** On another run `team` went concern → strength off one sentence
+while four other things darkened. A delta that only ever darkens is as broken as one that only
+brightens — and "never came up" is reported as its own outcome, because an unaddressed concern
+is a missed opportunity, not a resolution.
+
+**Isolated like the grader** — the delta call never sees the persona prompt or the word
+"encouraging."
+
+### The full demo, now one click
+
+`npm run ui` → **sample** → wait ~80s → **New session** → answer → **Debrief**
+
+1. Pre-read memo appears *before any conversation exists* — posture, the case for passing, six
+   ranked probes with slide references
+2. Start the session: the investor opens with a deck-derived contradiction
+3. Answer; watch claim chips and findings appear live
+4. Debrief: the posture delta
+
+**Phase 1 complete.** Deck ingestion → per-slide vision → one-liner test → deck score →
+five-pass pre-read → seeded ledger → planned probes → posture → posture delta → UI.
