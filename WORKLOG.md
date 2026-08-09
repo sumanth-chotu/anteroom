@@ -286,3 +286,60 @@ market?"* Nothing in the behavioural profile asked for that framing — it came 
 it was.
 
 **Next:** adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).
+
+---
+
+## 2026-08-08 — Phase 1a: deck ingestion + visual analysis
+
+**Phase:** 1 · **Commit:** pending
+
+**What:** `npm run deck -- <file>`. PDF/PPTX/image → PNG per slide → per-slide vision critique →
+deterministic checks → one-liner test → deck score.
+
+- `deck/ingest.ts` — pdftoppm at 200 DPI; LibreOffice for PPTX; clear `MissingToolError` naming
+  the brew command when a binary is absent
+- `deck/vision.ts` — one `grok-4.5` call per slide, typed `SlideIssue` enum, concurrency 4
+- `deck/analyse.ts` — missing sections, density, cross-slide numbers, one-liner test, score
+- `fixtures/decks/planted-flaws/` — an eval deck with authored ground truth
+
+**Why one call per slide** rather than one batched call for the deck: a batched call skims, and
+the whole point is catching what a skim misses — the missing y-axis label, the 7px footnote, the
+logo wall where half are pilots. Cost is not a constraint here (PLAN.md §12).
+
+**Why deck numbers go through the *existing* ledger checks** rather than a parallel deck check
+system: the seed failure modes are identical — design partner vs paying customer does not change
+because it is printed rather than spoken — and it means deck-vs-spoken contradiction detection
+falls out for free once a session starts.
+
+**Verified empirically before building:** xAI vision wants OpenAI-style
+`{type:'image_url', image_url:{url}}`, **not** the `input_image` blocks the guide shows. Minimum
+image dimension is 8px. Worth an API probe rather than a guess.
+
+**Result on the planted-flaw fixture: 7 of 7 flaws detected** — unlabeled axis, logo soup, the
+7px buried caveat, top-down TAM, text wall, missing competition slide, unsourced statistic.
+
+**The one-liner test worked exactly as designed:**
+- slide 1 → *"Sentinel is an AI-powered intelligence platform for modern teams."*
+- whole deck → *"…scores online payment transactions in under 200ms to accept, review, or decline
+  them before settlement."*
+
+The divergence *is* the finding, and it needs no explanation to land.
+
+**Learned — two bugs the first real run exposed, both false positives:**
+
+1. **"Stated headcount as 4 and 2 for the same period."** Slide 8 says "four engineers and two
+   go-to-market hires" — both normalise to `headcount`, and got compared. Fixed with a rule
+   worth keeping: **two numbers stated in the same breath are a breakdown, not a
+   contradiction.** A contradiction now requires claims from different origins (turn or slide).
+   Three tests encode it.
+2. **Comprehension scored 4 despite the one-liner test failing.** Only the whole-deck sentence
+   fed the score, so the divergence — the actual signal — was invisible. Now both halves feed
+   it, and divergence emits its own high-severity finding.
+
+Both are the same failure class flagged in PLAN.md §14: a false finding discredits every true
+one, so precision matters more than recall here.
+
+**Measured:** 8-slide deck, 24.6s wall clock, 18 model calls, 58k in / 3.1k out.
+
+**Next:** the five-pass pre-read memo (planned probes, posture, caseForNo), wiring it into the
+session opening, and deck UI.

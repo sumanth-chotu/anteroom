@@ -28,6 +28,8 @@ sessions/
 *.pdf
 *.pptx
 !docs/**/*.pdf
+# Eval fixtures are checked in on purpose — ground truth we authored.
+!fixtures/**/*.pdf
 
 # OS / editor
 .DS_Store

@@ -1,0 +1,147 @@
+<!doctype html>
+<!--
+  EVAL FIXTURE — a seed deck with deliberately planted flaws.
+
+  Ground truth is authored, which makes this the cleanest eval suite in the
+  project (PLAN.md §11). Each planted flaw is a detection assertion.
+
+  Planted:
+    slide 1  vague one-liner        → whole-deck one-liner should diverge from it
+    slide 4  unlabeled_axis         → growth chart, no y-axis numbers or units
+    slide 4  "12 design partners"   → contradicts slide 8's "8 paying customers"
+    slide 5  logo_soup              → wall of "customers", unqualified
+    slide 5  buried_caveat          → "*includes pilots and trials" in 7px type
+    slide 6  top_down_tam           → "1% of a $50B market", no bottom-up
+    slide 7  text_wall              → dense paragraph, no structure
+    (none)   missing competition slide
+
+  Build:  npm run fixture:deck
+-->
+<meta charset="utf-8">
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: Helvetica, Arial, sans-serif; }
+  .s {
+    width: 1280px; height: 720px; padding: 72px 88px;
+    page-break-after: always; position: relative;
+    background: #fff; color: #14181f; display: flex; flex-direction: column;
+  }
+  h1 { font-size: 62px; letter-spacing: -1.5px; }
+  h2 { font-size: 40px; letter-spacing: -.6px; margin-bottom: 28px; }
+  p  { font-size: 24px; line-height: 1.5; color: #3c454f; }
+  .sub { font-size: 27px; color: #5d6773; margin-top: 20px; }
+  .num { font-size: 92px; font-weight: 700; letter-spacing: -3px; }
+  .lbl { font-size: 19px; color: #6b7480; margin-top: 6px; }
+  .row { display: flex; gap: 64px; margin-top: 40px; }
+  .pg { position: absolute; bottom: 30px; right: 44px; font-size: 14px; color: #aeb6c0; }
+  .tiny { position: absolute; bottom: 30px; left: 88px; font-size: 7px; color: #b6bcc4; }
+  .logos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 34px; }
+  .logo {
+    height: 84px; border: 1px solid #dfe3e8; border-radius: 8px; background: #f5f7f9;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px; color: #8d959e; letter-spacing: .5px;
+  }
+</style>
+
+<!-- 1 — TITLE. Deliberately vague one-liner. -->
+<div class="s" style="justify-content:center">
+  <h1>Sentinel</h1>
+  <div class="sub">An AI-powered intelligence platform for modern teams.</div>
+  <div class="sub" style="font-size:20px;color:#8d959e;margin-top:44px">Seed round · 2026</div>
+  <div class="pg">1</div>
+</div>
+
+<!-- 2 — PROBLEM -->
+<div class="s">
+  <h2>The problem</h2>
+  <p>Online payment fraud costs companies billions every year.</p>
+  <p style="margin-top:22px">Existing tools run in batch. By the time they flag a transaction,
+     the money has already moved and the chargeback is inevitable.</p>
+  <p style="margin-top:22px">Risk teams are stuck reviewing what already happened.</p>
+  <div class="pg">2</div>
+</div>
+
+<!-- 3 — SOLUTION -->
+<div class="s">
+  <h2>What we do</h2>
+  <p>Sentinel scores every transaction in under 200 milliseconds, inline, before it settles.</p>
+  <p style="margin-top:22px">We combine device signals, behavioural features and a low-latency
+     model to give an accept / review / decline decision synchronously.</p>
+  <div class="pg">3</div>
+</div>
+
+<!-- 4 — TRACTION. Chart with NO y-axis labels. Says 12 design partners. -->
+<div class="s">
+  <h2>Traction</h2>
+  <div class="row" style="margin-top:0">
+    <div><div class="num">12</div><div class="lbl">design partners</div></div>
+    <div><div class="num">40%</div><div class="lbl">week over week</div></div>
+    <div><div class="num">200ms</div><div class="lbl">p99 latency</div></div>
+  </div>
+  <svg width="920" height="290" style="margin-top:34px">
+    <line x1="60" y1="250" x2="880" y2="250" stroke="#c8cdd4" stroke-width="2"/>
+    <line x1="60" y1="20"  x2="60"  y2="250" stroke="#c8cdd4" stroke-width="2"/>
+    <polyline points="60,242 190,238 320,230 450,208 580,168 710,104 860,26"
+              fill="none" stroke="#2f6df0" stroke-width="5"/>
+    <text x="470" y="284" font-size="17" fill="#8d959e" text-anchor="middle">Volume scored</text>
+  </svg>
+  <div class="pg">4</div>
+</div>
+
+<!-- 5 — LOGO SOUP + buried caveat -->
+<div class="s">
+  <h2>Our customers</h2>
+  <div class="logos">
+    <div class="logo">NORTHWIND</div><div class="logo">LUMEN PAY</div>
+    <div class="logo">ARCADIA</div><div class="logo">BRIGHTSIDE</div>
+    <div class="logo">HALLOWAY</div><div class="logo">VERTEX ONE</div>
+    <div class="logo">MERIDIAN</div><div class="logo">CASTLEGATE</div>
+  </div>
+  <div class="tiny">*includes pilots, trials and design partners; not all are paying</div>
+  <div class="pg">5</div>
+</div>
+
+<!-- 6 — TOP-DOWN TAM -->
+<div class="s">
+  <h2>Market</h2>
+  <div class="num" style="font-size:112px">$50B</div>
+  <div class="lbl" style="font-size:23px">global fraud prevention spend</div>
+  <p style="margin-top:40px">Capturing just <strong>1%</strong> of this market is a
+     $500M revenue business.</p>
+  <div class="pg">6</div>
+</div>
+
+<!-- 7 — TEXT WALL -->
+<div class="s">
+  <h2>Team</h2>
+  <p style="font-size:20px;line-height:1.45">
+    Our founding team brings together deep, complementary expertise across payments
+    infrastructure, machine learning systems and enterprise go-to-market motions, with a
+    shared history of shipping mission-critical systems at scale in high-regulation
+    environments. Our CEO spent six years at a leading payments company where they led
+    fraud detection initiatives spanning real-time scoring, chargeback mitigation and
+    merchant risk tooling, and worked closely with cross-functional stakeholders across
+    risk, engineering and compliance to deliver measurable reductions in fraud loss rates.
+    Our CTO previously architected distributed low-latency systems and brings a rigorous
+    engineering philosophy focused on reliability, observability and operational
+    excellence. Together the team has built and scaled systems handling significant
+    transaction volumes and has developed a nuanced understanding of the operational,
+    technical and organisational challenges inherent in deploying real-time decisioning
+    infrastructure inside large financial institutions and high-growth fintech companies.
+  </p>
+  <div class="pg">7</div>
+</div>
+
+<!-- 8 — ASK. "8 paying customers" contradicts slide 4's "12 design partners". -->
+<div class="s">
+  <h2>The ask</h2>
+  <div class="row" style="margin-top:0">
+    <div><div class="num">$3M</div><div class="lbl">seed round</div></div>
+    <div><div class="num">18mo</div><div class="lbl">runway</div></div>
+    <div><div class="num">8</div><div class="lbl">paying customers today</div></div>
+  </div>
+  <p style="margin-top:52px">Funds hiring four engineers and two go-to-market hires to reach
+     100 paying customers.</p>
+  <div class="pg">8</div>
+</div>

@@ -60,6 +60,39 @@ describe('directContradictions', () => {
     assert.equal(found.length, 0);
   });
 
+  test('two numbers from the same turn are a breakdown, not a contradiction', () => {
+    // "hiring four engineers and two go-to-market hires" — both normalise to
+    // headcount, but they sum, they don't conflict. Caught on the first real
+    // deck run; a false contradiction discredits every other finding.
+    const found = directContradictions(
+      ledgerOf(
+        claim('headcount', 4, { turnId: 't-same' }),
+        claim('headcount', 2, { turnId: 't-same' }),
+      ),
+    );
+    assert.equal(found.length, 0);
+  });
+
+  test('the same metric across different turns still contradicts', () => {
+    const found = directContradictions(
+      ledgerOf(
+        claim('headcount', 4, { turnId: 't-1' }),
+        claim('headcount', 12, { turnId: 't-2' }),
+      ),
+    );
+    assert.equal(found.length, 1);
+  });
+
+  test('same-slide deck numbers are also treated as a breakdown', () => {
+    const found = directContradictions(
+      ledgerOf(
+        claim('headcount', 4, { source: 'deck', slideNumber: 8, turnId: undefined }),
+        claim('headcount', 2, { source: 'deck', slideNumber: 8, turnId: undefined }),
+      ),
+    );
+    assert.equal(found.length, 0);
+  });
+
   test('ignores low-confidence claims', () => {
     const found = directContradictions(
       ledgerOf(

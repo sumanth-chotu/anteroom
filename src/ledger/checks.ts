@@ -80,6 +80,15 @@ export function directContradictions(ledger: Ledger): Finding[] {
     const first = group[0];
     if (!first || group.length < 2) continue;
 
+    // Two numbers stated in the same breath are a BREAKDOWN, not a
+    // contradiction. "Hiring four engineers and two go-to-market hires" both
+    // normalise to headcount, and comparing them yields a nonsense finding.
+    //
+    // A contradiction requires the founder to have said different things at
+    // different moments — so claims sharing an origin are skipped.
+    const origins = new Set(group.map((c) => c.turnId ?? `slide-${c.slideNumber}`));
+    if (origins.size < 2) continue;
+
     const distinct = [...new Set(group.map((c) => c.value))];
     if (distinct.length < 2) continue;
 

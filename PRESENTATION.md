@@ -314,3 +314,53 @@ Three concrete safeguards, worth naming on the slide because they show judgement
    photographers who took them. A `photoUrl` field exists if licensed imagery is ever obtained.
 
 Bios state only publicly known facts — firm, role, what they're known for.
+
+---
+
+## Slide: the deck reads the deck
+
+`npm run deck -- deck.pdf` — PDF → PNG per slide → one vision call per slide.
+
+**Why vision and not text extraction:** `pdf-to-text` throws away everything an investor
+actually reacts to. The unlabeled y-axis. The 7px footnote. The wall of logos where half are
+pilots. None of it survives as text.
+
+### The one-liner test — the cheapest high-signal feature in the product
+
+Two sentences, generated separately, shown side by side:
+
+> **from slide 1:** *"Sentinel is an AI-powered intelligence platform for modern teams."*
+> **from the whole deck:** *"Sentinel is a real-time AI platform that scores online payment
+> transactions in under 200ms to accept, review, or decline them before settlement."*
+
+The divergence *is* the finding. The title slide is not describing the company, and it takes no
+explanation for a founder to see it. **Five seconds of demo, zero setup.**
+
+### Eval result: 7 of 7 planted flaws detected
+
+The fixture deck has authored ground truth — every flaw is a detection assertion:
+
+| Planted | Caught |
+|---|---|
+| Unlabeled y-axis on the growth chart | ✓ |
+| Logo soup labelled "our customers" | ✓ |
+| 7px caveat: "not all are paying" | ✓ |
+| Top-down TAM ("1% of $50B") | ✓ |
+| 136-word text wall | ✓ |
+| No competition slide at all | ✓ |
+| Unsourced "costs billions" statistic | ✓ |
+
+8 slides, 24.6 seconds, 18 model calls.
+
+### The engineering story worth telling: two false positives
+
+Both found by the first real run, both passing unit tests:
+
+1. **"Stated headcount as 4 and 2."** The slide said "four engineers and two go-to-market
+   hires" — both normalise to `headcount`. Fixed with a rule that generalises: **two numbers
+   stated in the same breath are a breakdown, not a contradiction.**
+2. **Comprehension scored 4 while the one-liner test was visibly failing** — only half the test
+   fed the score.
+
+The through-line: **a false finding is worse than a missed one.** It discredits every true
+finding, and this product is nothing if the founder stops believing it.
