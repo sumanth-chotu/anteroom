@@ -759,3 +759,29 @@ with shift-click preserved for re-running the ~80s pipeline live. `DEMO.md`'s S2
 pre-flight checklist updated to match; "warm the pre-read before recording" is obsolete. The
 brief and pre-read fixture paths moved from `.tmp/` to `fixtures/`, so the demo now survives a
 clean checkout.
+
+---
+
+## 2026-08-08 — README
+
+**Phase:** — · **Commit:** pending
+
+**What:** Full setup and usage documentation — prerequisites, environment, every command, the
+architecture summary, troubleshooting, and measured costs.
+
+**Verified rather than assumed.** Cloned the repo to a temp directory and walked the quick start
+as a stranger would: `npm install` (5 packages), tests and typecheck pass with **no API key at
+all**, a missing key produces a clear actionable error rather than a stack trace, and all three
+fixtures are present. Also checked programmatically that every `npm run` command in the README
+exists in `package.json` and that every script target file exists on disk.
+
+That last check caught a dead script: `npm run eval` had pointed at `src/cli/eval.ts` since the
+very first scaffold, and the eval suite was never built. Removed rather than documented.
+
+**Troubleshooting section is drawn from real failures**, not imagined ones — the missing
+`pdftoppm`, the silent voice drop and where to read the log, and the fact that microphone access
+is blocked on insecure origins so a LAN IP will fail where `localhost` works.
+
+**Learned:** a README is the one file where "it works on my machine" is guaranteed to be wrong.
+Cloning fresh and running it took two minutes and found a broken command that had been sitting
+in `package.json` for the entire project.
