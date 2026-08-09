@@ -156,6 +156,22 @@
 
   .empty { color: var(--faint); font-size: 12px; font-style: italic; }
 
+  /* ── voice ── */
+  #voice.live { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+  .voicebar {
+    display: none; align-items: center; gap: 14px;
+    padding: 12px 26px; border-top: 1px solid var(--line); background: var(--panel);
+  }
+  .voicebar.on { display: flex; }
+  .orb {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--faint); flex: none;
+    transition: background .15s, box-shadow .15s;
+  }
+  .orb.listening { background: var(--green); box-shadow: 0 0 0 5px rgba(74,222,128,.14); }
+  .orb.speaking  { background: var(--investor); box-shadow: 0 0 0 5px rgba(125,211,252,.16); }
+  .vstatus { font: 11px/1 var(--mono); color: var(--dim); letter-spacing: .05em; }
+  .live-cap { color: var(--faint); font-style: italic; font-size: 13px; }
+
   /* ── pre-read + delta ── */
   .posture {
     display: inline-block; font: 700 10px/1 var(--mono); letter-spacing: .1em;
@@ -215,6 +231,7 @@
   </div>
   <select id="profile"></select>
   <button id="start" class="primary">New session</button>
+  <button id="voice">🎙 Voice</button>
   <button id="debrief" disabled>Debrief</button>
   <button id="export" disabled>Export</button>
 </header>
@@ -227,7 +244,14 @@
       </p>
     </div>
     <div id="error" class="err" hidden></div>
-    <div class="composer">
+    <div class="voicebar" id="voicebar">
+      <span class="orb" id="orb"></span>
+      <span class="vstatus" id="vstatus">idle</span>
+      <span class="spacer" style="flex:1"></span>
+      <button id="barge">Interrupt</button>
+      <button id="endvoice">End</button>
+    </div>
+    <div class="composer" id="composer">
       <div class="row">
         <textarea id="answer" placeholder="Your answer…" disabled></textarea>
         <button id="send" disabled>Send</button>
@@ -412,6 +436,101 @@ $('debrief').onclick = async () => {
     setBusy(false);
   }
 };
+
+// ── voice mode ──────────────────────────────────────────────────────────────
+let voice = null;
+let liveInvestor = '';
+
+function setVoiceStatus(text, orbClass = '') {
+  $('vstatus').textContent = text;
+  $('orb').className = `orb ${orbClass}`;
+}
+
+function appendVoiceTurn(role, text) {
+  const cls = role === 'investor' ? 'investor' : 'founder';
+  const who = role === 'investor' ? (memo && window.__who ? window.__who : 'Investor') : 'You';
+  $('scroll').insertAdjacentHTML(
+    'beforeend',
+    `<div class="turn ${cls}"><div class="who">${esc(who)}</div><div class="body">${esc(text)}</div></div>`,
+  );
+  $('scroll').scrollTop = $('scroll').scrollHeight;
+}
+
+$('voice').onclick = async () => {
+  if (voice) return;
+  showError(null);
+  $('voice').classList.add('live');
+  $('voice').textContent = '● live';
+  $('voicebar').classList.add('on');
+  $('composer')?.setAttribute('hidden', '');
+  $('scroll').innerHTML = '';
+  setVoiceStatus('connecting…');
+
+  const { VoiceSession } = await import('/voice.js');
+  voice = new VoiceSession({
+    profileId: $('profile').value,
+    memo,
+    onNotice: (n) => {
+      switch (n.kind) {
+        case 'status':
+          if (n.state === 'ready') setVoiceStatus('listening', 'listening');
+          if (n.state === 'closed') endVoice();
+          break;
+        case 'speech':
+          setVoiceStatus(n.active ? 'you are speaking' : 'listening', n.active ? 'listening' : '');
+          break;
+        case 'speaking':
+          if (n.active) setVoiceStatus('investor speaking', 'speaking');
+          break;
+        case 'transcript':
+          if (n.final) {
+            if (n.role === 'investor') liveInvestor = '';
+            appendVoiceTurn(n.role, n.text);
+          } else if (n.role === 'investor') {
+            liveInvestor += n.text;
+          }
+          break;
+        case 'claim':
+          $('scroll').insertAdjacentHTML(
+            'beforeend',
+            `<div class="annot" style="margin:0 0 14px auto;justify-content:flex-end">
+               <span class="chip claim">${esc(n.metric)} = ${esc(n.value)}</span></div>`,
+          );
+          break;
+        case 'finding':
+          $('scroll').insertAdjacentHTML(
+            'beforeend',
+            `<div class="finding ${n.severity}" style="margin:0 0 16px">
+               <div class="sum">${esc(n.summary)}</div></div>`,
+          );
+          break;
+        case 'error':
+          showError(n.message);
+          break;
+      }
+    },
+  });
+
+  try {
+    await voice.start();
+  } catch (error) {
+    showError(`Microphone: ${error.message}`);
+    endVoice();
+  }
+};
+
+function endVoice() {
+  voice?.stop();
+  voice = null;
+  $('voice').classList.remove('live');
+  $('voice').textContent = '🎙 Voice';
+  $('voicebar').classList.remove('on');
+  $('composer')?.removeAttribute('hidden');
+  setVoiceStatus('idle');
+}
+
+$('endvoice').onclick = endVoice;
+$('barge').onclick = () => voice?.interrupt();
 
 const POSTURE_LABEL = {
   leaning_in: 'Leaning in', neutral: 'Neutral',

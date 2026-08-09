@@ -31,6 +31,7 @@ import { generatePreRead } from '../preread/preread.ts';
 import { computePostureDelta, type PostureDeltaResult } from '../preread/delta.ts';
 import type { PreReadMemo } from '../preread/types.ts';
 import { profileView, sessionView, snapshotUsage, type UsageSnapshot } from './view.ts';
+import { attachVoiceRelay } from '../voice/relay.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env['PORT'] ?? 4317);
@@ -252,6 +253,20 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
   const path = url.pathname;
 
+  if (path === '/voice.js') {
+    try {
+      const js = await readFile(join(HERE, 'public', 'voice.js'), 'utf8');
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(js);
+    } catch {
+      res.writeHead(404).end('voice.js missing');
+    }
+    return;
+  }
+
   if (path === '/' || path === '/index.html') {
     try {
       const html = await readFile(join(HERE, 'public', 'index.html'), 'utf8');
@@ -279,7 +294,14 @@ const server = createServer(async (req, res) => {
   json(res, 404, { error: 'not found' });
 });
 
+// The voice relay shares this process deliberately: it needs a long-lived
+// host, which is the same reason this is a plain Node server rather than
+// Next.js on serverless (PLAN.md §2.3).
+attachVoiceRelay(server, '/voice');
+
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`\n  \x1b[1mRadar\x1b[0m testing UI  \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
-  console.log(`  \x1b[2m${PROFILES.length} investor profiles loaded · ctrl-c to stop\x1b[0m\n`);
+  console.log(
+    `  \x1b[2m${PROFILES.length} investor profiles · voice relay on ws://localhost:${PORT}/voice · ctrl-c to stop\x1b[0m\n`,
+  );
 });

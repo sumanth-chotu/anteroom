@@ -454,3 +454,54 @@ is a missed opportunity, not a resolution.
 
 **Phase 1 complete.** Deck ingestion → per-slide vision → one-liner test → deck score →
 five-pass pre-read → seeded ledger → planned probes → posture → posture delta → UI.
+
+---
+
+## Slide: voice
+
+`wss://api.x.ai/v1/realtime` · speech-to-speech · PCM16 24 kHz · **first audio ~1.0s**
+
+> *"I'm Bill Gurley with Benchmark. What's the business?"* — spoken, from the same persona
+> definition the text mode uses.
+
+### The relay isn't plumbing — it's Loop 2
+
+The xAI key can't live in the browser, so a relay sits in the middle regardless. Since it's
+there, it does the work:
+
+```
+browser ──ws──▶ relay ──wss──▶ xAI realtime
+                  │
+                  ├─ watches note_claim tool calls
+                  ├─ feeds the claim ledger
+                  ├─ runs deterministic contradiction checks
+                  └─ injects a system message back into the LIVE session
+```
+
+**A contradiction detected in code becomes a spoken question, mid-conversation.**
+
+### Verifying instead of assuming — the docs were wrong twice
+
+I probed the live socket before writing the client. Two things would have cost a day each:
+
+- Default voice is `xai_ara`, **not** the documented "eve"
+- `turn_detection` defaults to **null** — server VAD is off unless you ask, so the agent would
+  simply never respond to speech
+
+Audio format isn't in the docs at all; it came from the cookbook (PCM16 / 24 kHz / mono).
+
+### The latency constraint that forced a design decision
+
+`note_claim` fires mid-sentence and the model **blocks on the tool result** — so the voice path
+cannot afford the model call the text path uses to normalise metric labels. That produced
+`ledger/normalise.ts`: deterministic keyword matching, ordered most-specific-first so "paying
+customers" never collapses into "customers". If those two ever merged, the conflation check goes
+blind and the product's signature catch stops working.
+
+**A latency budget changing an architectural decision — a good, concrete engineering story.**
+
+### The cost question, finally answered
+
+`usage` on `response.done` is `{}`. **The realtime API reports no token counts.** Voice cost is
+dashboard-only; there is no programmatic path. Worth stating as a finding rather than an open
+question.

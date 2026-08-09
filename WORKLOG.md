@@ -429,3 +429,50 @@ claims. Delta ~25s.
 pre-read, seeded ledger, planned probes, posture, posture delta, and UI for all of it.
 
 **Next:** Phase 2 — the voice loop. WS relay, `grok-voice-latest`, barge-in.
+
+---
+
+## 2026-08-08 — Phase 2a: voice relay
+
+**Phase:** 2 · **Commit:** pending
+
+**What:** `voice/protocol.ts`, `voice/relay.ts`, browser client `public/voice.js`, voice mode in
+the UI, and two probes (`probe:realtime`, `probe:relay`).
+
+**Verified the contract before building on it, and the docs were wrong twice:**
+
+- Default voice is **`xai_ara`**, not "eve" as documented.
+- `turn_detection` defaults to **`{type: null}`** — server VAD is OFF unless you ask. Miss this
+  and the agent never responds to speech. Would have been a miserable debugging session.
+- Audio is **PCM16 / 24 kHz / mono**, base64 both ways (from the cookbook; the docs omit it).
+- 14 server event types observed, full list in `protocol.ts`.
+- Function tools ARE accepted in a voice session — echoed back in `session.updated`.
+
+**The relay does Loop 2, not just plumbing.** It has to sit in the middle anyway (the key can't
+go in the browser), so it watches `note_claim` tool calls, feeds the ledger, runs the
+deterministic checks, and injects a `role: system` message when a contradiction fires. That is
+Loop 2 closing the circle: a contradiction detected in code becomes a spoken question.
+
+**`ledger/normalise.ts` is new and exists because of latency.** The text path normalises metric
+labels via a model call; the voice path cannot — `note_claim` fires mid-sentence and the model
+blocks on the tool result. Deterministic keyword matching instead, ordered most-specific-first
+so "paying customers" never falls through to `customers_total`. Collapsing those two would blind
+the conflation check, which is the whole point of the ledger. 7 tests.
+
+**Two things in the browser client that are easy to get wrong:** the AudioContext runs at 24 kHz
+so the browser resamples from hardware rate rather than doing it by hand in JS; and playback
+schedules each chunk against a running cursor rather than playing on arrival, which otherwise
+clicks and drifts.
+
+**Measured:** relay connect 9ms · **first audio 1034–1539ms** · 156KB ≈ 3.3s of speech. Persona
+survives into voice — opened with *"I'm Bill Gurley with Benchmark. What's the business?"*
+
+**The cost question is now answered, and the answer is no.** `usage` on `response.done` is `{}`
+— the realtime API reports no token counts at all. Voice cost is obtainable only from the xAI
+dashboard; there is no programmatic path. Worth recording as a fact rather than leaving open.
+
+**NOT yet verified — needs a human with a microphone:** actual mic capture, barge-in on real
+speech, and `note_claim` firing from spoken numbers. Everything up to the mic is verified by
+`npm run probe:relay`, which does exactly what the browser does minus the audio input.
+
+**Next:** a human-in-the-loop voice test, then Phase 3 scoring.

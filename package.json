@@ -16,13 +16,17 @@
     "ui": "node --env-file=.env --experimental-strip-types src/server/server.ts",
     "deck": "node --env-file=.env --experimental-strip-types src/cli/deck.ts",
     "fixture:deck": "\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=fixtures/decks/planted-flaws/deck.pdf fixtures/decks/planted-flaws/deck.html",
-    "preread": "node --env-file=.env --experimental-strip-types src/cli/preread.ts"
+    "preread": "node --env-file=.env --experimental-strip-types src/cli/preread.ts",
+    "probe:realtime": "node --env-file=.env --experimental-strip-types src/cli/probe-realtime.ts",
+    "probe:relay": "node --experimental-strip-types src/cli/probe-relay.ts"
   },
   "dependencies": {
+    "ws": "^8.21.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/ws": "^8.18.1",
     "typescript": "^5.7.2"
   }
 }
