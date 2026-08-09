@@ -190,7 +190,7 @@ const routes: Array<{
       const data = typeof body['data'] === 'string' ? body['data'] : '';
       if (!data) return json(res, 400, { error: 'no file data' });
 
-      const dir = await mkdtemp(join(tmpdir(), 'radar-upload-'));
+      const dir = await mkdtemp(join(tmpdir(), 'anteroom-upload-'));
       const path = join(dir, filename.replace(/[^\w.\-]/g, '_'));
       await writeFile(path, Buffer.from(data, 'base64'));
 
@@ -329,7 +329,7 @@ const routes: Array<{
       const payload = JSON.stringify(view, null, 2);
       res.writeHead(200, {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="radar-${id}.json"`,
+        'Content-Disposition': `attachment; filename="anteroom-${id}.json"`,
       });
       res.end(payload);
     },
@@ -401,7 +401,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\n  \x1b[1mRadar\x1b[0m testing UI  \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
+  console.log(`\n  \x1b[1mAnteroom\x1b[0m testing UI  \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
   console.log(
     `  \x1b[2m${PROFILES.length} investor profiles · voice relay on ws://localhost:${PORT}/voice · ctrl-c to stop\x1b[0m\n`,
   );

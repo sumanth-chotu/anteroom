@@ -1,4 +1,4 @@
-# CLAUDE.md — Radar
+# CLAUDE.md — Anteroom
 
 Read this before doing anything. `PLAN.md` is the product spec; this file is how we work.
 
@@ -36,7 +36,7 @@ Bias toward over-capturing. Trimming at the end is easy; remembering is not.
 
 ## Project
 
-**Radar** — a voice-first AI seed investor that reads a founder's deck, forms an opinion before
+**Anteroom** — a voice-first AI seed investor that reads a founder's deck, forms an opinion before
 they speak, interrogates them under real pressure, then reports where they lost the room.
 
 Full spec: `PLAN.md`. Read it before designing anything new — most questions are answered there.

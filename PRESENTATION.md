@@ -7,7 +7,7 @@ this is the quarry we cut slides from. Bias toward over-capturing.
 
 ## The one-line pitch
 
-> Radar is an AI seed investor that reads your deck, forms an opinion before you speak,
+> Anteroom is an AI seed investor that reads your deck, forms an opinion before you speak,
 > interrogates you under real pressure — then shows you what it was thinking before you
 > walked in.
 

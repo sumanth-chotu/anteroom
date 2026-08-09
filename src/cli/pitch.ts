@@ -112,7 +112,7 @@ function wrap(text: string, width = 76, indent = '  '): string {
   return lines.map((l) => indent + l).join('\n');
 }
 
-console.log(`\n${C.bold('RADAR')} ${C.dim('· seed pitch practice · phase 0 text harness')}`);
+console.log(`\n${C.bold('ANTEROOM')} ${C.dim('· seed pitch practice · phase 0 text harness')}`);
 const who = personaFor(profile.id);
 if (who) {
   console.log(`${C.dim('Investor:')} ${C.bold(who.fullName)} ${C.dim(`— ${who.title}, ${who.firm}`)}`);

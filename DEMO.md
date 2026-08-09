@@ -11,7 +11,7 @@ words to say.
 
 One sentence has to survive:
 
-> **Radar is an investor who has already formed an opinion about you before you open your
+> **Anteroom is an investor who has already formed an opinion about you before you open your
 > mouth — and can prove where you lost them.**
 
 Everything in the cut serves that. Anything that doesn't is out, however good it is.
@@ -233,7 +233,7 @@ grader        never sees the persona
 ```
 
 **Final line, on black:**
-> **Radar. It already has an opinion about you.**
+> **Anteroom. It already has an opinion about you.**
 
 ---
 

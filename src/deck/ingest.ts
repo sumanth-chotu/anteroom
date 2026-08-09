@@ -105,7 +105,7 @@ export interface IngestResult {
  */
 export async function ingestDeck(inputPath: string): Promise<IngestResult> {
   const ext = extname(inputPath).toLowerCase();
-  const workDir = await mkdtemp(join(tmpdir(), 'radar-deck-'));
+  const workDir = await mkdtemp(join(tmpdir(), 'anteroom-deck-'));
 
   let imagePaths: string[];
   let sourceFormat: string;

@@ -1,4 +1,4 @@
-# Radar — AI Investor Pitch Practice
+# Anteroom — AI Investor Pitch Practice
 
 A voice-first practice partner that reads your deck, forms an opinion before you speak,
 interrogates you like a real seed investor, then tells you exactly where you lost the room.
