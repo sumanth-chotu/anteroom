@@ -7,13 +7,14 @@
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
-import type { IncomingMessage, Server } from 'node:http';
+import type { IncomingMessage } from 'node:http';
 
 import { runDuo } from './duo.ts';
 import type { PreReadMemo } from '../preread/types.ts';
 
-export function attachDuoRelay(server: Server, path = '/duo'): WebSocketServer {
-  const wss = new WebSocketServer({ server, path });
+/** `noServer` — mounted by `server/ws-router.ts`. See the note in relay.ts. */
+export function createDuoRelay(): WebSocketServer {
+  const wss = new WebSocketServer({ noServer: true });
 
   wss.on('connection', (client: WebSocket, request: IncomingMessage) => {
     const url = new URL(request.url ?? '/', 'http://localhost');

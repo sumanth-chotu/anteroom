@@ -15,7 +15,6 @@
 
 import { WebSocketServer, WebSocket, type RawData } from 'ws';
 import type { IncomingMessage } from 'node:http';
-import type { Server } from 'node:http';
 
 import { config } from '../config.ts';
 import { NOTE_CLAIM_TOOL, type ServerEvent } from './protocol.ts';
@@ -89,8 +88,17 @@ function buildInstructions(options: VoiceSessionOptions): string {
   return parts.join('\n');
 }
 
-export function attachVoiceRelay(server: Server, path = '/voice'): WebSocketServer {
-  const wss = new WebSocketServer({ server, path });
+/**
+ * Built with `noServer: true` and mounted by the router in `server/ws-router.ts`.
+ *
+ * NOT `new WebSocketServer({ server, path })`. `ws` registers one `upgrade`
+ * listener per instance, and any instance whose path does not match calls
+ * `abortHandshake` — destroying the socket before the instance that *would*
+ * have handled it ever sees the request. Two relays on one HTTP server that way
+ * break each other: adding /duo made /voice fail with "Invalid WebSocket frame".
+ */
+export function createVoiceRelay(): WebSocketServer {
+  const wss = new WebSocketServer({ noServer: true });
 
   wss.on('connection', (client: WebSocket, request: IncomingMessage) => {
     const url = new URL(request.url ?? '/', 'http://localhost');

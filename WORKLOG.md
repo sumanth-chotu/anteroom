@@ -527,3 +527,30 @@ The generated script is genuinely usable — the ledger steer is visible in it:
 *"40% growth on four is two more. Give me the absolute numbers month by month."*
 
 **Next:** Phase 3 — isolated consensus grader and the full report.
+
+---
+
+## 2026-08-08 — Fix: two WebSocket relays destroying each other
+
+**Phase:** 2 · **Commit:** pending
+
+**Symptom:** clicking Voice in the UI gave "connection failed". It had worked before the
+two-agent demo landed.
+
+**Cause:** `ws` registers its own `upgrade` listener for every
+`new WebSocketServer({ server, path })`. An instance whose path does not match calls
+`abortHandshake` on the socket — so with `/voice` and `/duo` mounted that way, whichever
+listener ran first destroyed the handshake for the other. `/duo` returned HTTP 400 and `/voice`
+opened and then died with *"Invalid WebSocket frame: RSV1 must be clear"*, which reads like a
+protocol bug and is actually two servers fighting over one socket.
+
+**Fix:** `src/server/ws-router.ts` — one upgrade listener, explicit path routing, both relays
+built with `noServer: true`. Adding a third relay is now a one-line change rather than a new way
+to break the other two. Unknown paths get a clean 404 instead of a hang.
+
+**Learned:** the error message pointed at the wrong layer entirely. "Invalid WebSocket frame"
+suggests corruption or a proxy; the actual cause was library lifecycle. Reproducing against both
+paths directly — rather than reading the frame error — found it in one step.
+
+**Verified:** `/voice` OPEN · `/duo` OPEN · `/nope` 404 · full relay round trip green, first
+audio 1031ms.
