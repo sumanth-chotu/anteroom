@@ -76,3 +76,38 @@ before the meeting, and diffing pre-read vs post-meeting assessment answers the 
 most need to know: what you fixed in the room, and what you made worse.
 
 **Next:** Build it.
+
+---
+
+## 2026-08-08 — xAI client + toolchain verified
+
+**Phase:** 0 · **Commit:** pending
+
+**What:** TypeScript scaffold (no build step — Node 26 native type stripping via
+`--experimental-strip-types`), `src/config.ts`, `src/xai/client.ts`, and a smoke-test CLI.
+Client does chat, schema-constrained structured output, retries with backoff on 429/5xx,
+typed errors, and per-stage usage accounting.
+
+**Why:** Built usage accounting into the client from call one rather than bolting it on —
+`PRESENTATION.md` needs real cost-per-session numbers, and those can't be reconstructed from a
+dashboard after the fact. Every call carries a `tag` so cost is attributable by stage
+(pre-read, grading, ledger).
+
+Refusals are modeled as a distinct `XAIRefusalError` because xAI returns them as **HTTP 200**
+with a populated `refusal` field — code that reads `choices[0].message.content` unconditionally
+would silently produce an empty string instead of an error.
+
+Zod validates every structured response even though the API is schema-constrained. Constrained
+decoding is not a guarantee, and a silently-wrong shape downstream is worse than a throw.
+
+**Learned:**
+- Node's `--experimental-strip-types` **erases** types but cannot **transform** syntax, so TS
+  parameter properties (`constructor(readonly x: string)`) throw at runtime. Fixed by declaring
+  fields explicitly; `erasableSyntaxOnly: true` in tsconfig now catches it at typecheck.
+- Smoke test results: chat ~1.0s · `reasoning_effort` accepted and Grok 4.5 **returns its
+  reasoning trace** in `reasoning_content` · `json_schema` structured output works · prompt
+  caching engaged automatically (512 of 941 prompt tokens cached across 4 calls).
+- The structured-output test incidentally validated the core seed mechanic: it extracted
+  `isPaying: false` from *"12 design partners, none of them pay us yet."*
+
+**Next:** Investor brain — archetypes, seed spine, question engine, satisfaction gate.
