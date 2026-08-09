@@ -21,7 +21,8 @@
     "duo": "node --env-file=.env --experimental-strip-types src/cli/duo.ts",
     "brief": "node --env-file=.env --experimental-strip-types src/cli/brief.ts",
     "dossier": "node --env-file=.env --experimental-strip-types src/cli/dossier.ts",
-    "persona": "node --env-file=.env --experimental-strip-types src/cli/persona.ts"
+    "persona": "node --env-file=.env --experimental-strip-types src/cli/persona.ts",
+    "rehearse": "node --env-file=.env --experimental-strip-types src/cli/rehearse.ts"
   },
   "dependencies": {
     "ws": "^8.21.3",

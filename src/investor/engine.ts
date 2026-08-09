@@ -23,7 +23,13 @@ import { buildSystemPrompt, type InvestorProfile } from './profiles.ts';
 import type { SatisfactionVerdict } from './satisfaction.ts';
 import { POSTURE_EFFECT, type PreReadMemo } from '../preread/types.ts';
 import type { CategoryBrief } from '../category/types.ts';
-import { relevantConvictions, type Conviction, type CorpusPersona } from '../corpus/types.ts';
+import {
+  STRONG_CONVICTION_HITS,
+  relevantConvictions,
+  scoredConvictions,
+  type Conviction,
+  type CorpusPersona,
+} from '../corpus/types.ts';
 import type { Enrichment } from './briefing.ts';
 import {
   convictionDirective,
@@ -149,6 +155,33 @@ export function selectMove(
     };
   }
 
+  // Layer 1b — the founder leaned hard on something this investor has argued
+  // against in print.
+  //
+  // Ranked directly under a contradiction, and deliberately ABOVE follow_up. The
+  // first version placed it below, and it never fired once: a founder who is
+  // dodging keeps the follow-up layer alive indefinitely, so the layer meant to
+  // produce the sharpest questions was starved by the layer producing the most
+  // generic ones. Measured on a scripted pitch that tripped six triggers —
+  // conviction turns: 0.
+  //
+  // Gated at STRONG_CONVICTION_HITS so it interrupts only when the founder
+  // actually leaned on the idea. A single passing mention waits its turn below,
+  // because an investor who abandons every thread at the first keyword reads as
+  // having no attention span rather than strong opinions.
+  const strong = scoredConvictions(corpus, lastFounderText ?? '').find(
+    (scored) =>
+      scored.hits >= STRONG_CONVICTION_HITS &&
+      !state.pressedConvictions.has(convictionKey(scored.conviction)),
+  );
+  if (strong) {
+    return {
+      layer: 'conviction',
+      conviction: strong.conviction,
+      directive: convictionDirective([strong.conviction]),
+    };
+  }
+
   // Layer 2 — derailment.
   //
   // Chaotic profiles hijack the meeting. This is not a gag: it trains the one
@@ -197,19 +230,13 @@ export function selectMove(
     };
   }
 
-  // Layer 3b — the founder walked into something this investor has a real,
-  // published position on.
+  // Layer 3b — a weaker conviction hit: mentioned once, not leaned on.
   //
-  // This is the layer that makes questions stop sounding generic. The spine asks
-  // "how big is the market?" because a checklist says to. This fires because the
-  // founder just said "the TAM is billions", which trips a trigger attached to a
-  // belief the investor argued at length in print — so the question arrives with
-  // a specific argument behind it and can survive being pushed back on.
-  //
-  // Placed after follow_up (finish the thread you are on) but ahead of the
-  // planned probes and the spine: something they said ten seconds ago beats
-  // something you decided to ask before the meeting, and beats a checklist
-  // outright.
+  // The strong version already ran above the follow-up layer. This one waits
+  // until the current thread is finished, which is the right order for a passing
+  // mention — but it still outranks the planned probes and the spine, because
+  // something the founder said ten seconds ago beats something decided before the
+  // meeting, and beats a checklist outright.
   const tripped = relevantConvictions(corpus, lastFounderText ?? '').find(
     (c) => !state.pressedConvictions.has(convictionKey(c)),
   );
@@ -503,7 +530,25 @@ async function generate(
     maxTokens: 2048,
   });
 
-  return result.text.trim();
+  return asUtterance(result.text);
+}
+
+/**
+ * Flatten a completion into one spoken line.
+ *
+ * The model sometimes returns a turn across two lines — "Why you?\nWhy are you
+ * the right people to build this?" — which the UI rendered as "Why you?Why are
+ * you..." with the newline swallowed. Speech has no line breaks, so collapsing
+ * them is the correct representation rather than a patch over a rendering bug,
+ * and the same string is what the voice path would have to say out loud.
+ *
+ * Also strips wrapping quotes: asked for "only what you say out loud" the model
+ * occasionally quotes the whole utterance.
+ */
+export function asUtterance(text: string): string {
+  const flat = text.replace(/\s*\n+\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const quoted = /^"([\s\S]+)"$/.exec(flat) ?? /^'([\s\S]+)'$/.exec(flat);
+  return (quoted?.[1] ?? flat).trim();
 }
 
 /** Profile dials adjusted by pre-read posture (PLAN.md §6.5). */

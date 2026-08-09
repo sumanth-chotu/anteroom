@@ -89,6 +89,31 @@ export function relevantConvictions(
   founderText: string,
   limit = 3,
 ): Conviction[] {
+  return scoredConvictions(persona, founderText, limit).map((scored) => scored.conviction);
+}
+
+export interface ScoredConviction {
+  conviction: Conviction;
+  /** Distinct triggers hit. 2+ means the founder leaned on the idea, not brushed it. */
+  hits: number;
+}
+
+/**
+ * How many triggers a belief needs before it may interrupt an in-progress thread.
+ *
+ * One hit is a passing mention — a founder who says "platform" once has not
+ * necessarily made a claim about focus, and dropping the current question to
+ * pounce would read as an investor with no attention span. Two or more distinct
+ * triggers means they actually leaned on the idea, and pursuing it is what a
+ * person with a real conviction does.
+ */
+export const STRONG_CONVICTION_HITS = 2;
+
+export function scoredConvictions(
+  persona: CorpusPersona | null | undefined,
+  founderText: string,
+  limit = 3,
+): ScoredConviction[] {
   if (!persona) return [];
   const haystack = founderText.toLowerCase();
   if (haystack.trim().length === 0) return [];
@@ -104,6 +129,5 @@ export function relevantConvictions(
     }))
     .filter((scored) => scored.hits > 0)
     .sort((a, b) => b.hits - a.hits)
-    .slice(0, limit)
-    .map((scored) => scored.conviction);
+    .slice(0, limit);
 }
