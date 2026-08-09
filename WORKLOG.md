@@ -554,3 +554,37 @@ paths directly — rather than reading the frame error — found it in one step.
 
 **Verified:** `/voice` OPEN · `/duo` OPEN · `/nope` 404 · full relay round trip green, first
 audio 1031ms.
+
+---
+
+## 2026-08-08 — Fix: clicking Voice crashed the server
+
+**Phase:** 2 · **Commit:** pending
+
+**Symptom:** "site is down" after clicking Voice. Not a stopped process — the server had
+crashed.
+
+**Cause:** the browser starts streaming mic audio the instant the user clicks, while the
+upstream xAI socket is still `CONNECTING`. `upstream?.send()` guards against `undefined` but not
+against a not-yet-open socket, and `ws` **throws** on send in that state. The throw happened
+inside a socket message handler, which surfaces as an unhandled process error and terminates the
+server. One click, whole UI gone.
+
+**Three fixes, because one was not enough:**
+
+1. `sendUpstream()` checks `readyState === OPEN`, and **buffers** frames until the upstream is
+   ready rather than dropping them — so the founder's first words survive the connect window.
+   Bounded at 400 frames (~8s) so a stuck connection cannot grow it without limit.
+2. The client message handler is wrapped; an exception becomes a relay error notice to that one
+   session instead of a process-level throw.
+3. `uncaughtException` / `unhandledRejection` backstops on the dev server. A single bad session
+   should degrade, not produce a dead port and a confusing "site is down".
+
+**Learned:** the failure mode was disproportionate to the bug. A missing readyState check is
+trivial; taking down every other session and the whole UI is not. Anything running inside a
+socket callback needs its own containment, because the default behaviour of an unhandled throw
+there is to kill the process.
+
+**Verified by reproducing it:** connect, send `start`, then blast 60 audio frames immediately —
+exactly what the mic does. Previously fatal. Now: 152KB of audio back, transcript *"I'm Bill
+Gurley with Benchmark. What are you building?"*, process alive, HTTP 200.

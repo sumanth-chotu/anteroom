@@ -105,6 +105,27 @@ export function createVoiceRelay(): WebSocketServer {
     const profileId = url.searchParams.get('profile') ?? 'seed_skeptic';
 
     let upstream: WebSocket | undefined;
+
+    /**
+     * Mic audio arrives the instant the user clicks, while the upstream socket
+     * is still CONNECTING. `upstream?.send()` guards against undefined but NOT
+     * against a not-yet-open socket, and `ws` throws on send in that state —
+     * which crashed the whole server the first time Voice was clicked.
+     *
+     * Frames are buffered until upstream is open, then flushed, so the founder's
+     * first words are not lost either.
+     */
+    const preConnect: string[] = [];
+    const MAX_BUFFERED_FRAMES = 400; // ~8s at 20ms/frame; bounded, not unbounded
+
+    const sendUpstream = (payload: string): void => {
+      if (upstream?.readyState === WebSocket.OPEN) {
+        upstream.send(payload);
+      } else if (preConnect.length < MAX_BUFFERED_FRAMES) {
+        preConnect.push(payload);
+      }
+    };
+
     let ledger: Ledger = emptyLedger(`voice-${Date.now()}`);
     const raised = new Set<string>();
     let claimSeq = 0;
@@ -129,7 +150,7 @@ export function createVoiceRelay(): WebSocketServer {
       // item is treated as meta-conversation and merely acknowledged, while a
       // bracketed user item actually redirects the next question. Verified
       // directly against the socket.
-      upstream?.send(
+      sendUpstream(
         JSON.stringify({
           type: 'conversation.item.create',
           item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] },
@@ -148,7 +169,7 @@ export function createVoiceRelay(): WebSocketServer {
 
       // Acknowledge immediately. The tool is silent by contract, but the model
       // still blocks on a result — a slow reply here stalls the conversation.
-      upstream?.send(
+      sendUpstream(
         JSON.stringify({
           type: 'conversation.item.create',
           item: { type: 'function_call_output', call_id: callId, output: 'ok' },
@@ -197,11 +218,23 @@ export function createVoiceRelay(): WebSocketServer {
     };
 
     // ── browser → relay ──────────────────────────────────────────────────────
+    //
+    // Wrapped: an exception in a socket handler is an unhandled 'error' event on
+    // the process, which terminates the server. One bad voice session must never
+    // take the UI down with it.
     client.on('message', (raw: RawData, isBinary: boolean) => {
+      try {
+        handleClientMessage(raw, isBinary);
+      } catch (error) {
+        notify({ kind: 'error', message: error instanceof Error ? error.message : 'relay error' });
+      }
+    });
+
+    function handleClientMessage(raw: RawData, isBinary: boolean): void {
       // Audio arrives as binary PCM16 and is forwarded as base64 without
       // inspection — the audio path stays free of work.
       if (isBinary) {
-        upstream?.send(
+        sendUpstream(
           JSON.stringify({
             type: 'input_audio_buffer.append',
             audio: (raw as Buffer).toString('base64'),
@@ -229,10 +262,14 @@ export function createVoiceRelay(): WebSocketServer {
       }
 
       if (message['type'] === 'interrupt') {
-        upstream?.send(JSON.stringify({ type: 'response.cancel' }));
+        sendUpstream(JSON.stringify({ type: 'response.cancel' }));
         return;
       }
-    });
+    }
+
+    client.on('error', (error) =>
+      notify({ kind: 'error', message: `socket: ${error.message}` }),
+    );
 
     client.on('close', () => {
       closed = true;
@@ -262,6 +299,11 @@ export function createVoiceRelay(): WebSocketServer {
         );
         // Kick off the opening turn — the investor speaks first.
         upstream?.send(JSON.stringify({ type: 'response.create' }));
+
+        // Flush anything the mic produced while we were connecting.
+        for (const frame of preConnect) upstream?.send(frame);
+        preConnect.length = 0;
+
         notify({ kind: 'status', state: 'ready' });
       });
 

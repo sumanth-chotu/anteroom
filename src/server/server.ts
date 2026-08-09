@@ -304,6 +304,17 @@ mountWebSocketRoutes(server, {
   '/duo': createDuoRelay(),
 });
 
+// Dev-server backstop. A throw inside a socket callback surfaces as an
+// unhandled process error and kills the server — which is how a single Voice
+// click took the whole UI down. Log and keep serving; the alternative is a dead
+// port and a confusing "site is down".
+process.on('uncaughtException', (error) => {
+  console.error('\x1b[31m[uncaught]\x1b[0m', error);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('\x1b[31m[unhandled rejection]\x1b[0m', reason);
+});
+
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`\n  \x1b[1mRadar\x1b[0m testing UI  \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
   console.log(
