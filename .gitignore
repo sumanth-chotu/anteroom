@@ -1,0 +1,37 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Runtime artifacts
+.tmp/
+tmp/
+*.log
+npm-debug.log*
+
+# Generated during dev: uploaded decks, rendered slides, session audio.
+# These are founders' confidential material — must never reach git.
+uploads/
+storage/
+sessions/
+*.pdf
+*.pptx
+!docs/**/*.pdf
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
