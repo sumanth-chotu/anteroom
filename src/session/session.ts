@@ -21,12 +21,13 @@ import {
   coverageReport,
   initialState,
   selectMove,
-  speak,
+  speakChecked,
   type EngineState,
   type NextMove,
   type Turn,
 } from '../investor/engine.ts';
 import { getProfile, isChaotic, type InvestorProfile } from '../investor/profiles.ts';
+import { loadBriefing, type Briefing } from '../investor/briefing.ts';
 import type { PreReadMemo } from '../preread/types.ts';
 import type { CategoryBrief } from '../category/types.ts';
 import { topicById } from '../investor/spine.ts';
@@ -40,6 +41,12 @@ export interface SessionTurn extends Turn {
   probeId?: string;
   /** Present on founder turns — the verdict on that answer. */
   verdict?: SatisfactionVerdict;
+  /** Investor turns: summed AI-tell weight of what shipped. 0 is clean. */
+  tellScore?: number;
+  /** Investor turns: the first attempt tripped the detector and was rerolled. */
+  regenerated?: boolean;
+  /** Investor turns: which of the investor's own convictions drove the question. */
+  convictionBelief?: string;
   /** Claims extracted from a founder turn. */
   claims?: Claim[];
   /** Present when this answer followed a derail. */
@@ -57,6 +64,25 @@ export interface SessionState {
   ledger: Ledger;
   turns: SessionTurn[];
   pendingMove?: NextMove;
+  /** Corpus persona + dossier, loaded once by `openSession`. */
+  briefing?: Briefing;
+}
+
+/**
+ * Create a session with the investor's research already loaded.
+ *
+ * Prefer this over `createSession`. The corpus persona and dossier are read from
+ * disk once here rather than per turn, so prompt building stays synchronous and
+ * the conversation path touches no I/O.
+ */
+export async function openSession(
+  profileId: string,
+  sessionId = `s${Date.now()}`,
+  memo?: PreReadMemo,
+  brief?: CategoryBrief,
+): Promise<SessionState> {
+  const session = createSession(profileId, sessionId, memo, brief);
+  return { ...session, briefing: await loadBriefing(profileId) };
 }
 
 export function createSession(
@@ -99,15 +125,19 @@ export async function investorTurn(
     lastFounderTurn?.verdict,
     session.memo,
     session.brief,
+    lastFounderTurn?.text,
+    session.briefing?.corpus,
   );
 
-  const text = await speak(
+  const spoken = await speakChecked(
     session.profile,
     session.turns.map(({ role, text }) => ({ role, text })),
     move,
     session.turns.length === 0,
     session.memo,
+    session.briefing,
   );
+  const text = spoken.text;
 
   const turn: SessionTurn = {
     id: nextTurnId(),
@@ -115,8 +145,11 @@ export async function investorTurn(
     text,
     at: Date.now(),
     layer: move.layer,
+    tellScore: spoken.tellScore,
+    regenerated: spoken.regenerated,
   };
   if (move.probeId) turn.probeId = move.probeId;
+  if (move.conviction) turn.convictionBelief = move.conviction.belief;
 
   return {
     session: { ...session, turns: [...session.turns, turn], pendingMove: move },
@@ -243,6 +276,33 @@ export function sessionMetrics(session: SessionState) {
     contradictionsFound: runChecks(session.ledger).length,
     coverage: coverageReport(session.engine),
     ...roomControlMetrics(session),
+    ...voiceMetrics(session),
+  };
+}
+
+/**
+ * How synthetic the investor sounded, measured rather than asserted.
+ *
+ * `tellsPerTurn` is the headline: it is the number this whole personality layer
+ * exists to move, and reporting it makes a regression visible instead of a
+ * matter of opinion. `regeneratedTurns` is the cost side — every one of those was
+ * a second model call, so the two numbers together say whether the detector is
+ * earning its latency.
+ *
+ * `convictionTurns` is the other half of the story: questions that came from one
+ * of the investor's own documented positions rather than from the generic spine.
+ */
+function voiceMetrics(session: SessionState) {
+  const investorTurns = session.turns.filter((t) => t.role === 'investor');
+  if (investorTurns.length === 0) return { tellsPerTurn: 0, regeneratedTurns: 0, convictionTurns: 0 };
+
+  const totalTells = investorTurns.reduce((n, t) => n + (t.tellScore ?? 0), 0);
+
+  return {
+    tellsPerTurn: totalTells / investorTurns.length,
+    regeneratedTurns: investorTurns.filter((t) => t.regenerated).length,
+    convictionTurns: investorTurns.filter((t) => t.layer === 'conviction').length,
+    convictionsPressed: investorTurns.flatMap((t) => (t.convictionBelief ? [t.convictionBelief] : [])),
   };
 }
 

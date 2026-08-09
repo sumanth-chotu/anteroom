@@ -195,6 +195,22 @@ export const PERSONAS: Record<string, Persona> = {
     avatar: { bg: '#2b3a4a', skin: '#e2b489', hair: '#3b322c', hairStyle: 'short', clothes: '#31424f', glasses: true, beard: true },
   },
 
+  essayist: {
+    fullName: 'Paul Graham',
+    shortName: 'Paul',
+    title: 'Co-founder',
+    firm: 'Y Combinator',
+    location: 'England',
+    bio:
+      'Co-founded Viaweb and Y Combinator. Has published essays at paulgraham.com since 2001; ' +
+      'they are among the most widely read writing about startups.',
+    publicStyle:
+      'Writes and argues from first principles, in deliberately plain language. Reduces a question ' +
+      'to its simplest form and then presses on it. Blunt about what he thinks is true, and more ' +
+      'interested in whether people want the thing than in how it is built.',
+    avatar: { bg: '#33323a', skin: '#e8c9a6', hair: '#a8a29b', hairStyle: 'receding', clothes: '#45444f', glasses: false, beard: false },
+  },
+
   incubator_blowhard: {
     fullName: 'Erlich Bachman',
     shortName: 'Erlich',

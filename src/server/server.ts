@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import {
-  createSession,
+  openSession,
   founderTurn,
   investorTurn,
   probeOutcomes,
@@ -119,7 +119,7 @@ const routes: Array<{
       let entry: Entry;
       try {
         entry = {
-          session: createSession(profileId, undefined, memo, brief),
+          session: await openSession(profileId, undefined, memo, brief),
           usageAtStart: snapshotUsage(),
           lock: Promise.resolve(),
         };

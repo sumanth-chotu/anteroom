@@ -22,7 +22,7 @@ import { POSTURE_LABEL, type PreReadMemo } from '../preread/types.ts';
 import { computePostureDelta } from '../preread/delta.ts';
 import { briefPriors, type CategoryBrief } from '../category/types.ts';
 import {
-  createSession,
+  openSession,
   probeOutcomes,
   transcriptFor,
   founderTurn,
@@ -154,7 +154,7 @@ if (briefPath) {
 }
 
 const input = await openInput();
-let session = createSession(profileId, undefined, memo, brief);
+let session = await openSession(profileId, undefined, memo, brief);
 
 try {
   while (true) {

@@ -23,11 +23,21 @@ import { buildSystemPrompt, type InvestorProfile } from './profiles.ts';
 import type { SatisfactionVerdict } from './satisfaction.ts';
 import { POSTURE_EFFECT, type PreReadMemo } from '../preread/types.ts';
 import type { CategoryBrief } from '../category/types.ts';
+import { relevantConvictions, type Conviction, type CorpusPersona } from '../corpus/types.ts';
+import type { Enrichment } from './briefing.ts';
+import {
+  convictionDirective,
+  detectTells,
+  shouldRegenerate,
+  tellComplaint,
+  tellScore,
+} from './voiceprint.ts';
 
 export type QuestionLayer =
   | 'contradiction'
   | 'derail'
   | 'follow_up'
+  | 'conviction'
   | 'planned_probe'
   | 'community_objection'
   | 'spine'
@@ -41,6 +51,8 @@ export interface NextMove {
   finding?: Finding;
   probeId?: string;
   objectionTheme?: string;
+  /** Set on the `conviction` layer — which belief the founder tripped. */
+  conviction?: Conviction;
 }
 
 export interface EngineState {
@@ -66,6 +78,8 @@ export interface EngineState {
   askedProbes: Set<string>;
   /** Category objections already raised. */
   askedObjections: Set<string>;
+  /** Convictions already pressed, so a belief fires once rather than every turn. */
+  pressedConvictions: Set<string>;
 }
 
 export function initialState(): EngineState {
@@ -80,6 +94,7 @@ export function initialState(): EngineState {
     derailCount: 0,
     askedProbes: new Set(),
     askedObjections: new Set(),
+    pressedConvictions: new Set(),
   };
 }
 
@@ -99,6 +114,11 @@ function roll(seed: string): number {
   return ((h >>> 0) % 10_000) / 10_000;
 }
 
+/** Stable identity for a conviction, so each fires at most once per session. */
+export function convictionKey(conviction: Conviction): string {
+  return conviction.belief.slice(0, 80).toLowerCase();
+}
+
 /**
  * Choose the next move. Pure and deterministic — no model call, so question
  * selection can be unit-tested independently of phrasing.
@@ -110,6 +130,9 @@ export function selectMove(
   lastVerdict?: SatisfactionVerdict,
   memo?: PreReadMemo,
   brief?: CategoryBrief,
+  /** The founder's most recent answer, matched against conviction triggers. */
+  lastFounderText?: string,
+  corpus?: CorpusPersona | null,
 ): NextMove {
   // Layer 1 — a contradiction outranks everything else.
   const findings = unraisedFindings(ledger, state.raisedFindings);
@@ -171,6 +194,30 @@ export function selectMove(
         (dodged && state.followUpCount >= 1
           ? `\n\nThey have now dodged this twice. Say so plainly before asking again.`
           : ''),
+    };
+  }
+
+  // Layer 3b — the founder walked into something this investor has a real,
+  // published position on.
+  //
+  // This is the layer that makes questions stop sounding generic. The spine asks
+  // "how big is the market?" because a checklist says to. This fires because the
+  // founder just said "the TAM is billions", which trips a trigger attached to a
+  // belief the investor argued at length in print — so the question arrives with
+  // a specific argument behind it and can survive being pushed back on.
+  //
+  // Placed after follow_up (finish the thread you are on) but ahead of the
+  // planned probes and the spine: something they said ten seconds ago beats
+  // something you decided to ask before the meeting, and beats a checklist
+  // outright.
+  const tripped = relevantConvictions(corpus, lastFounderText ?? '').find(
+    (c) => !state.pressedConvictions.has(convictionKey(c)),
+  );
+  if (tripped) {
+    return {
+      layer: 'conviction',
+      conviction: tripped,
+      directive: convictionDirective([tripped]),
     };
   }
 
@@ -268,6 +315,7 @@ export function applyMove(
   const raisedFindings = new Set(state.raisedFindings);
   const askedProbes = new Set(state.askedProbes);
   const askedObjections = new Set(state.askedObjections);
+  const pressedConvictions = new Set(state.pressedConvictions);
   let currentTopic = state.currentTopic;
   let followUpCount = state.followUpCount;
 
@@ -280,6 +328,11 @@ export function applyMove(
     askedProbes.add(move.probeId);
   } else if (move.layer === 'community_objection' && move.objectionTheme) {
     askedObjections.add(move.objectionTheme);
+  } else if (move.layer === 'conviction' && move.conviction) {
+    // Like a contradiction, a conviction interrupts without consuming the
+    // current topic's follow-up budget — the investor is reacting to what they
+    // just heard, not abandoning the thread.
+    pressedConvictions.add(convictionKey(move.conviction));
   } else if (move.layer === 'derail') {
     derailCount += 1;
     // A derail costs the founder a turn but does not advance or close a topic.
@@ -311,6 +364,7 @@ export function applyMove(
     derailCount,
     askedProbes,
     askedObjections,
+    pressedConvictions,
   };
   if (currentTopic) next.currentTopic = currentTopic;
   return next;
@@ -336,15 +390,75 @@ const POSTURE_NOTE: Record<string, string> = {
     'unhurried in the wrong way, and not inclined to help them out.',
 };
 
+export interface SpeakResult {
+  text: string;
+  /** Summed AI-tell weight of what shipped. 0 is clean. */
+  tellScore: number;
+  /** True when the first attempt tripped the detector and was thrown away. */
+  regenerated: boolean;
+}
+
 export async function speak(
   profile: InvestorProfile,
   history: Turn[],
   move: NextMove,
   opening = false,
   memo?: PreReadMemo,
+  enrichment?: Enrichment,
+): Promise<string> {
+  return (await speakChecked(profile, history, move, opening, memo, enrichment)).text;
+}
+
+/**
+ * `speak`, plus what the AI-tell detector saw.
+ *
+ * Separate function rather than a changed return type so every existing caller
+ * keeps working. The session layer uses this one, because "how synthetic did
+ * that turn sound, and did we have to retry" is a metric worth reporting.
+ */
+export async function speakChecked(
+  profile: InvestorProfile,
+  history: Turn[],
+  move: NextMove,
+  opening = false,
+  memo?: PreReadMemo,
+  enrichment?: Enrichment,
+): Promise<SpeakResult> {
+  const first = await generate(profile, history, move, opening, memo, enrichment);
+
+  if (!shouldRegenerate(first)) {
+    return { text: first, tellScore: tellScore(first), regenerated: false };
+  }
+
+  // One retry, never two.
+  //
+  // The complaint names the exact offending words, which is far more effective
+  // than repeating the rule — the rule was already in the system prompt and got
+  // ignored. A second retry is not worth the latency: measured, the first one
+  // fixes it or the phrasing is genuinely load-bearing for the point.
+  const complaint = tellComplaint(detectTells(first));
+  const second = await generate(profile, history, move, opening, memo, enrichment, complaint);
+
+  // Keep whichever is cleaner. A retry can come back worse, and shipping a
+  // worse turn to honour the retry would make the detector actively harmful.
+  const best = tellScore(second) <= tellScore(first) ? second : first;
+  return { text: best, tellScore: tellScore(best), regenerated: best === second };
+}
+
+async function generate(
+  profile: InvestorProfile,
+  history: Turn[],
+  move: NextMove,
+  opening: boolean,
+  memo?: PreReadMemo,
+  enrichment?: Enrichment,
+  complaint?: string,
 ): Promise<string> {
   const messages = [
-    { role: 'system' as const, content: buildSystemPrompt(profile) },
+    {
+      role: 'system' as const,
+      content: buildSystemPrompt(profile, enrichment, { opening }),
+    },
     ...history.map((turn) => ({
       role: turn.role === 'investor' ? ('assistant' as const) : ('user' as const),
       content: turn.text,
@@ -379,11 +493,12 @@ export async function speak(
     content:
       `${move.directive}\n\n` +
       `Respond with only what you say out loud. No stage directions, no labels, ` +
-      `no quotation marks around the whole thing. One question.`,
+      `no quotation marks around the whole thing. One question.` +
+      (complaint ? `\n\n${complaint}` : ''),
   });
 
   const result = await chat(messages, {
-    tag: `investor:speak:${move.layer}`,
+    tag: `investor:speak:${move.layer}${complaint ? ':retry' : ''}`,
     reasoningEffort: 'low',
     maxTokens: 2048,
   });

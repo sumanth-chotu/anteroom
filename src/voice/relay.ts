@@ -20,6 +20,10 @@ import { config } from '../config.ts';
 import { NOTE_CLAIM_TOOL, type ServerEvent } from './protocol.ts';
 import { buildSystemPrompt, getProfile } from '../investor/profiles.ts';
 import { personaFor } from '../investor/persona.ts';
+import { briefingSummary, loadBriefing, type Briefing } from '../investor/briefing.ts';
+import { relevantConvictions } from '../corpus/types.ts';
+import { convictionDirective } from '../investor/voiceprint.ts';
+import { assertVoice, castingNote, realtimeUrl, voiceFor } from './voices.ts';
 import { addClaim, emptyLedger, type Claim, type Ledger } from '../ledger/types.ts';
 import { findingKey, runChecks } from '../ledger/checks.ts';
 import { normaliseSpokenClaim } from '../ledger/normalise.ts';
@@ -27,7 +31,9 @@ import { parseSpokenNumber } from '../ledger/number.ts';
 import type { PreReadMemo } from '../preread/types.ts';
 import type { CategoryBrief } from '../category/types.ts';
 
-const UPSTREAM = `${config.xai.baseUrl.replace(/^http/, 'ws')}/realtime?model=${config.xai.voice}`;
+// Built per session, not once — the voice is part of the URL and differs by
+// investor. See src/voice/voices.ts for why it cannot go in `session.update`.
+const upstreamFor = (voice: string) => realtimeUrl(config.xai.baseUrl, config.xai.voice, voice);
 
 /**
  * Per-session logging.
@@ -53,6 +59,8 @@ export interface VoiceSessionOptions {
   profileId: string;
   memo?: PreReadMemo;
   brief?: CategoryBrief;
+  /** Corpus persona + dossier. Loaded once per session, before connecting. */
+  briefing?: Briefing;
 }
 
 /** Everything the UI needs to render the session as it happens. */
@@ -61,6 +69,7 @@ export type RelayNotice =
   | { kind: 'transcript'; role: 'investor' | 'founder'; text: string; final: boolean }
   | { kind: 'claim'; metric: string; value: string; verbatim: string }
   | { kind: 'finding'; severity: string; summary: string; probe: string }
+  | { kind: 'conviction'; belief: string; question: string }
   | { kind: 'speech'; active: boolean }
   | { kind: 'error'; message: string };
 
@@ -77,7 +86,11 @@ function buildInstructions(options: VoiceSessionOptions): string {
   const persona = personaFor(options.profileId);
   const memo = options.memo;
 
-  const parts = [buildSystemPrompt(profile)];
+  // `opening: true` — a realtime session gets ONE set of instructions for the
+  // whole conversation and drives its own turn-taking, so the opening directive
+  // has to be front-loaded here. In text mode it is passed only on the first
+  // turn; here there is no per-turn hook to add it later.
+  const parts = [buildSystemPrompt(profile, options.briefing, { opening: true })];
 
   parts.push(
     `\nTHIS IS A SPOKEN CONVERSATION.\n` +
@@ -145,7 +158,8 @@ export function createVoiceRelay(): WebSocketServer {
 
     const sessionId = `s${++sessionSeq}`;
     const log = makeLog(sessionId);
-    log('client connected', { profile: profileId });
+    const voice = voiceFor(profileId);
+    log('client connected', { profile: profileId, voice, casting: castingNote(profileId) });
 
     // Traffic counters — a drop is usually visible as one direction stopping.
     let framesIn = 0;
@@ -196,7 +210,10 @@ export function createVoiceRelay(): WebSocketServer {
     let claimSeq = 0;
     let memo: PreReadMemo | undefined;
     let brief: CategoryBrief | undefined;
+    let briefing: Briefing | undefined;
     let closed = false;
+    /** Convictions already pressed, so a belief fires once per conversation. */
+    const pressed = new Set<string>();
 
     const notify = (notice: RelayNotice) => {
       if (client.readyState === WebSocket.OPEN) {
@@ -222,6 +239,34 @@ export function createVoiceRelay(): WebSocketServer {
           item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] },
         }),
       );
+    };
+
+    /**
+     * The corpus feature, in voice mode.
+     *
+     * Text mode can pick a layer per turn; a realtime model drives its own
+     * turn-taking, so the only lever is the same steer mechanism the ledger uses
+     * for contradictions. The founder says something that trips a trigger on one
+     * of this investor's documented positions, and the argument behind it is
+     * injected as a bracketed user item they pick up on their next turn.
+     *
+     * At most one per conversation turn and never the same belief twice —
+     * otherwise a founder who says "huge market" three times gets the same
+     * lecture three times.
+     */
+    const pressConviction = (heard: string): void => {
+      const corpus = briefing?.corpus;
+      if (!corpus || heard.trim().length < 12) return;
+
+      const conviction = relevantConvictions(corpus, heard).find(
+        (c) => !pressed.has(c.belief),
+      );
+      if (!conviction) return;
+      pressed.add(conviction.belief);
+
+      log('conviction tripped', conviction.belief.slice(0, 60));
+      notify({ kind: 'conviction', belief: conviction.belief, question: conviction.question });
+      steer(`[${convictionDirective([conviction])}]`);
     };
 
     const handleClaim = async (callId: string, argsJson: string) => {
@@ -328,7 +373,16 @@ export function createVoiceRelay(): WebSocketServer {
         if (memo?.claims?.length) {
           ledger = { ...ledger, claims: memo.claims.map((c) => ({ ...c, sessionId: ledger.sessionId })) };
         }
-        connectUpstream();
+        // Read the research from disk BEFORE opening the upstream socket. The
+        // instructions are sent once, on `open`, and a briefing that arrives
+        // after that point can never reach the conversation.
+        void loadBriefing(profileId)
+          .then((loaded) => {
+            briefing = loaded;
+            log('briefing', briefingSummary(loaded));
+          })
+          .catch(() => undefined)
+          .finally(connectUpstream);
         return;
       }
 
@@ -359,7 +413,7 @@ export function createVoiceRelay(): WebSocketServer {
     function connectUpstream(): void {
       notify({ kind: 'status', state: 'connecting' });
 
-      upstream = new WebSocket(UPSTREAM, {
+      upstream = new WebSocket(upstreamFor(voice), {
         headers: { Authorization: `Bearer ${config.xai.apiKey}` },
       });
 
@@ -373,6 +427,7 @@ export function createVoiceRelay(): WebSocketServer {
                 profileId,
                 ...(memo ? { memo } : {}),
                 ...(brief ? { brief } : {}),
+                ...(briefing ? { briefing } : {}),
               }),
               // Server VAD is OFF by default — without this the agent never
               // responds to speech. Verified via probe.
@@ -402,6 +457,21 @@ export function createVoiceRelay(): WebSocketServer {
         switch (event.type) {
           case 'ping':
             return;
+
+          // The only place a wrong voice becomes visible. An unrecognised id is
+          // silently swapped for human_eve rather than rejected, so without this
+          // check every investor would sound identical and nothing would say so.
+          case 'session.created': {
+            const reported = (event as { session?: { voice?: string } }).session?.voice;
+            const warning = assertVoice(voice, reported);
+            if (warning) {
+              log('VOICE NOT HONOURED', warning);
+              notify({ kind: 'error', message: warning });
+            } else {
+              log('voice confirmed', reported);
+            }
+            return;
+          }
 
           case 'response.created':
             responseAudioChunks = 0;
@@ -438,10 +508,13 @@ export function createVoiceRelay(): WebSocketServer {
             notify({ kind: 'transcript', role: 'investor', text: String(event.transcript ?? ''), final: true });
             return;
 
-          case 'conversation.item.input_audio_transcription.completed':
-            log('founder heard', String(event.transcript ?? '').slice(0, 70));
-            notify({ kind: 'transcript', role: 'founder', text: String(event.transcript ?? ''), final: true });
+          case 'conversation.item.input_audio_transcription.completed': {
+            const heard = String(event.transcript ?? '');
+            log('founder heard', heard.slice(0, 70));
+            notify({ kind: 'transcript', role: 'founder', text: heard, final: true });
+            pressConviction(heard);
             return;
+          }
 
           case 'input_audio_buffer.speech_started':
             log('VAD: speech started');

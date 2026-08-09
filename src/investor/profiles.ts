@@ -26,8 +26,10 @@
  */
 
 import { identityGuardrail, personaFor, type Persona } from './persona.ts';
+import type { Enrichment } from './briefing.ts';
+import { beliefsDirective, openingDirective, personalityBlock } from './voiceprint.ts';
 
-export type ProfileKind = 'synthetic' | 'derived' | 'character';
+export type ProfileKind = 'synthetic' | 'derived' | 'corpus' | 'character';
 
 export interface Provenance {
   /** What public material this style was distilled from. */
@@ -323,6 +325,56 @@ You are conversational and quick, and you tend to make up your mind early.
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Corpus-grounded — built from the investor's own published body of work
+//
+// Distinct from `derived` in where the material comes from. A derived profile is
+// distilled from observed behaviour; this one is synthesised from a corpus the
+// model read in full (`src/corpus/`). Its convictions, diagnostics, opening and
+// voice all come from `fixtures/personas/<id>.json` at prompt-build time, so
+// most of the personality is NOT in this file — the fields here only set
+// temperament.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CORPUS_GROUNDED: InvestorProfile[] = [
+  {
+    id: 'essayist',
+    name: 'The essayist',
+    kind: 'corpus',
+    blurb:
+      'Reduces your company to its simplest question and presses there. Kills you on whether anyone actually wants it.',
+    warmth: 0.45,
+    interruptThresholdMs: 35_000,
+    followUpDepth: 3,
+    derailment: 0.05,
+    selfRegard: 0.15,
+    useCategoryBrief: false,
+    quirks: [
+      'You reduce what the founder said to a simpler question and ask that instead.',
+      'You are more interested in whether people want it than in how it was built.',
+    ],
+    persona: `
+You have seen a very large number of startups at their earliest stage, and you
+think most of what founders worry about is not what kills them.
+
+You argue from first principles and in plain words. When a founder gives you an
+abstraction you replace it with the concrete version and hand it back. You would
+rather establish one true thing than cover ten topics.
+
+You are not unkind, but you are unhurried and completely unmoved by enthusiasm.
+`.trim(),
+    provenance: {
+      derivedFrom:
+        'Synthesised from the author\'s own published essays, read in full. Every conviction in ' +
+        'the generated persona carries a verbatim quote and a link to the essay it came from.',
+      generatedAt: '2026-08-08',
+      disclaimer:
+        'AI caricature for pitch practice, built from publicly published essays. Not affiliated ' +
+        'with, endorsed by, or reviewed by this person. Nothing said here is a real quote.',
+    },
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Character — trains a different skill
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -380,7 +432,12 @@ monologuist — the comedy is in the derailing, not the length.
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const PROFILES: readonly InvestorProfile[] = [...SYNTHETIC, ...DERIVED, ...CHARACTERS];
+export const PROFILES: readonly InvestorProfile[] = [
+  ...SYNTHETIC,
+  ...DERIVED,
+  ...CORPUS_GROUNDED,
+  ...CHARACTERS,
+];
 
 const BY_ID = new Map(PROFILES.map((p) => [p.id, p]));
 
@@ -407,7 +464,32 @@ export function getPersona(profileId: string): Persona | undefined {
   return personaFor(profileId);
 }
 
-export function buildSystemPrompt(profile: InvestorProfile): string {
+/**
+ * Assemble the investor's system prompt.
+ *
+ * `enrichment` carries the researched material — a corpus persona, a dossier, or
+ * neither. It is optional so that every existing caller and every test keeps
+ * working unchanged, and so a missing fixture degrades to the behaviour this app
+ * had before any research existed.
+ *
+ * Order is deliberate and load-bearing:
+ *
+ *   1. identity + accuracy guardrail   who you are, and the rules for a real person
+ *   2. BASE_PERSONA                    what makes this an investor, not an assistant
+ *   3. temperament + quirks            the hand-written dials
+ *   4. personality block               anti-AI speech rules, then their real voice
+ *   5. beliefs                         convictions with arguments, diagnostics, canon
+ *   6. opening                         how they start, when opening a meeting
+ *
+ * The generic speech prohibitions have to arrive BEFORE the researched voice, so
+ * that a real documented habit can override a blanket ban. Our ban on "however"
+ * is a heuristic; evidence that this person says it is better information.
+ */
+export function buildSystemPrompt(
+  profile: InvestorProfile,
+  enrichment?: Enrichment,
+  options: { opening?: boolean } = {},
+): string {
   const persona = personaFor(profile.id);
 
   // Identity first, guardrail immediately after. A model that knows its own
@@ -427,5 +509,16 @@ export function buildSystemPrompt(profile: InvestorProfile): string {
       ? `\n\nYOUR SPECIFIC HABITS\n\n${profile.quirks.map((q) => `- ${q}`).join('\n')}`
       : '';
 
-  return `${identity}${BASE_PERSONA}\n\nYOUR SPECIFIC CHARACTER\n\n${profile.persona}${quirks}`;
+  const sections = [
+    `${identity}${BASE_PERSONA}`,
+    `YOUR SPECIFIC CHARACTER\n\n${profile.persona}${quirks}`,
+    personalityBlock(profile, enrichment),
+    beliefsDirective(enrichment?.corpus),
+  ];
+
+  // Only when actually opening. Carried every turn it competes with the move
+  // directive, and the investor re-introduces itself halfway through a meeting.
+  if (options.opening) sections.push(openingDirective(enrichment?.corpus));
+
+  return sections.filter((section) => section.trim().length > 0).join('\n\n');
 }

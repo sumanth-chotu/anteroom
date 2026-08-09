@@ -1,0 +1,30 @@
+{
+  "profileId": "seed_skeptic",
+  "person": "Bill Gurley",
+  "builtAt": "2026-08-09T04:19:45.631Z",
+  "publicFootprint": "thin",
+  "focus": {
+    "stages": [],
+    "sectors": [],
+    "checkSize": ""
+  },
+  "notableInvestments": [],
+  "positions": [],
+  "pressurePoints": [],
+  "dealbreakers": [],
+  "speech": {
+    "signaturePhrases": [],
+    "rhythm": "",
+    "tics": [],
+    "register": "",
+    "humour": "",
+    "neverSays": []
+  },
+  "sources": [],
+  "cost": {
+    "seconds": 130.441,
+    "usd": 10.93914,
+    "searches": 3,
+    "toolCalls": 63
+  }
+}
