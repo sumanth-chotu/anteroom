@@ -96,6 +96,15 @@ export interface ScoredConviction {
   conviction: Conviction;
   /** Distinct triggers hit. 2+ means the founder leaned on the idea, not brushed it. */
   hits: number;
+  /**
+   * The exact trigger phrases found in the founder's words.
+   *
+   * Kept so the UI can highlight them in the transcript. The mechanism is the
+   * most convincing thing about this feature and it is invisible otherwise — a
+   * conviction that fires looks like luck until you can see the words that fired
+   * it sitting in your own sentence.
+   */
+  matched: string[];
 }
 
 /**
@@ -119,14 +128,16 @@ export function scoredConvictions(
   if (haystack.trim().length === 0) return [];
 
   return persona.convictions
-    .map((conviction) => ({
-      conviction,
-      hits: new Set(
-        conviction.triggersOn
-          .map((trigger) => trigger.toLowerCase().trim())
-          .filter((trigger) => trigger.length >= MIN_TRIGGER_LENGTH && haystack.includes(trigger)),
-      ).size,
-    }))
+    .map((conviction) => {
+      const matched = [
+        ...new Set(
+          conviction.triggersOn
+            .map((trigger) => trigger.toLowerCase().trim())
+            .filter((trigger) => trigger.length >= MIN_TRIGGER_LENGTH && haystack.includes(trigger)),
+        ),
+      ];
+      return { conviction, hits: matched.length, matched };
+    })
     .filter((scored) => scored.hits > 0)
     .sort((a, b) => b.hits - a.hits)
     .slice(0, limit);

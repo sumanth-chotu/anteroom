@@ -25,7 +25,6 @@ import { POSTURE_EFFECT, type PreReadMemo } from '../preread/types.ts';
 import type { CategoryBrief } from '../category/types.ts';
 import {
   STRONG_CONVICTION_HITS,
-  relevantConvictions,
   scoredConvictions,
   type Conviction,
   type CorpusPersona,
@@ -59,6 +58,8 @@ export interface NextMove {
   objectionTheme?: string;
   /** Set on the `conviction` layer — which belief the founder tripped. */
   conviction?: Conviction;
+  /** The founder's exact words that fired it, so the UI can highlight them. */
+  matchedTriggers?: string[];
 }
 
 export interface EngineState {
@@ -178,6 +179,7 @@ export function selectMove(
     return {
       layer: 'conviction',
       conviction: strong.conviction,
+      matchedTriggers: strong.matched,
       directive: convictionDirective([strong.conviction]),
     };
   }
@@ -237,14 +239,15 @@ export function selectMove(
   // mention — but it still outranks the planned probes and the spine, because
   // something the founder said ten seconds ago beats something decided before the
   // meeting, and beats a checklist outright.
-  const tripped = relevantConvictions(corpus, lastFounderText ?? '').find(
-    (c) => !state.pressedConvictions.has(convictionKey(c)),
+  const tripped = scoredConvictions(corpus, lastFounderText ?? '').find(
+    (scored) => !state.pressedConvictions.has(convictionKey(scored.conviction)),
   );
   if (tripped) {
     return {
       layer: 'conviction',
-      conviction: tripped,
-      directive: convictionDirective([tripped]),
+      conviction: tripped.conviction,
+      matchedTriggers: tripped.matched,
+      directive: convictionDirective([tripped.conviction]),
     };
   }
 

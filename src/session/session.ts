@@ -47,6 +47,12 @@ export interface SessionTurn extends Turn {
   regenerated?: boolean;
   /** Investor turns: which of the investor's own convictions drove the question. */
   convictionBelief?: string;
+  /** The verbatim line from their writing that the belief rests on. */
+  convictionQuote?: string;
+  convictionSource?: string;
+  convictionUrl?: string;
+  /** The founder's exact phrases that fired it. */
+  matchedTriggers?: string[];
   /** Claims extracted from a founder turn. */
   claims?: Claim[];
   /** Present when this answer followed a derail. */
@@ -149,7 +155,13 @@ export async function investorTurn(
     regenerated: spoken.regenerated,
   };
   if (move.probeId) turn.probeId = move.probeId;
-  if (move.conviction) turn.convictionBelief = move.conviction.belief;
+  if (move.conviction) {
+    turn.convictionBelief = move.conviction.belief;
+    turn.convictionQuote = move.conviction.quote;
+    turn.convictionSource = move.conviction.sourceTitle;
+    turn.convictionUrl = move.conviction.sourceUrl;
+  }
+  if (move.matchedTriggers?.length) turn.matchedTriggers = move.matchedTriggers;
 
   return {
     session: { ...session, turns: [...session.turns, turn], pendingMove: move },

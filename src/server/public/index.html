@@ -358,6 +358,57 @@
     text-transform: uppercase; color: var(--faint); margin-bottom: 3px;
   }
 
+  /* ── the trigger that fired a conviction, in the founder's own words ───── */
+  .turn.founder mark {
+    background: transparent; color: var(--text);
+    box-shadow: inset 0 -0.62em 0 rgba(255,255,255,.13);
+    border-bottom: 1px solid rgba(255,255,255,.42);
+    padding: 0 1px; border-radius: 1px;
+  }
+
+  /* The verbatim line the belief rests on. */
+  .from-belief .cite {
+    margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line);
+    font-size: 12px; line-height: 1.5; color: var(--text);
+  }
+  .from-belief .cite .src {
+    display: block; margin-top: 4px;
+    font: 500 8.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--faint);
+  }
+  .from-belief .cite .src a { color: var(--faint); text-decoration: none; border-bottom: 1px solid var(--line); }
+  .from-belief .cite .src a:hover { color: var(--text); }
+
+  /* ── the corpus wall ─────────────────────────────────────────────────────
+   * One cell per document the persona was built from, lit when that document
+   * produced a conviction. "89 documents" is a claim; 89 cells is evidence, and
+   * it reads instantly from across a room.
+   */
+  .wall {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(9px, 1fr));
+    gap: 3px; margin-top: 14px;
+  }
+  .wall i {
+    display: block; aspect-ratio: 1; border-radius: 1px;
+    background: #1c1c1c; transition: background .15s, box-shadow .15s;
+  }
+  .wall i.lit { background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.45); }
+  .wall i:hover { background: #4a4a4a; }
+  .wall i.lit:hover { background: #fff; }
+  .wallkey {
+    display: flex; justify-content: space-between; gap: 10px; margin-top: 8px;
+    font: 500 9px/1.6 var(--mono); letter-spacing: .08em; color: var(--faint);
+  }
+  .wallkey i { display: inline-block; width: 7px; height: 7px; border-radius: 1px; background: #fff; margin-right: 4px; }
+
+  /* Their own coinages — the vocabulary that makes a persona sound like itself. */
+  .canon { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .canon span {
+    font: 500 9.5px/1 var(--mono); letter-spacing: .04em;
+    color: var(--dim); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 4px 6px;
+  }
+
   /* ── the mirror ──────────────────────────────────────────────────────────
    * What the investor pictured, next to the slide that produced it.
    *
@@ -1083,9 +1134,31 @@ for (const event of ['pointerdown', 'keydown']) {
   document.addEventListener(event, resumeAvatar, { passive: true });
 }
 
+/**
+ * Wrap the trigger phrases in the founder's own words.
+ *
+ * Escapes first, then marks, so nothing here can inject markup — the text is
+ * whatever a founder typed. Longest triggers first: "the tam is billions" must
+ * win over "billions", otherwise the shorter match splits the longer one and the
+ * highlight comes out fragmented.
+ */
+function markTriggers(text, triggers) {
+  const safe = esc(text);
+  if (!triggers || triggers.length === 0) return safe;
+
+  const ordered = [...triggers].sort((a, b) => b.length - a.length);
+  let out = safe;
+  for (const trigger of ordered) {
+    const pattern = esc(trigger).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Skip anything already inside a <mark> from a longer trigger.
+    out = out.replace(new RegExp(`(?![^<]*</mark>)(${pattern})`, 'i'), '<mark>$1</mark>');
+  }
+  return out;
+}
+
 function renderConversation(view) {
   const who = view.profile.persona;
-  const html = view.turns.map((t) => {
+  const html = view.turns.map((t, index) => {
     if (t.role === 'investor') {
       const label = who
         ? `<img class="face" src="${who.avatar}" alt=""> ${esc(who.shortName)}`
@@ -1093,8 +1166,24 @@ function renderConversation(view) {
       // The two signals from the personality layer. `convictionBelief` is the
       // interesting one: it shows the question came from a position this
       // investor argued in their own writing, not from the generic checklist.
+      // The belief, plus the verbatim line it rests on. The quote is the most
+      // credible object in the whole system and it was previously kept off
+      // screen — the panel claimed "8 convictions cited" and never showed one.
       const belief = t.convictionBelief
-        ? `<div class="from-belief"><b>from their own position</b>${esc(t.convictionBelief)}</div>`
+        ? `<div class="from-belief">
+             <b>from their own position</b>${esc(t.convictionBelief)}
+             ${
+               t.convictionQuote
+                 ? `<div class="cite">“${esc(t.convictionQuote)}”
+                      <span class="src">${
+                        t.convictionUrl
+                          ? `<a href="${t.convictionUrl}" target="_blank" rel="noreferrer">${esc(t.convictionSource || 'source')}</a>`
+                          : esc(t.convictionSource || '')
+                      }</span>
+                    </div>`
+                 : ''
+             }
+           </div>`
         : '';
       const reroll = t.regenerated
         ? `<span class="chip warn" title="first attempt tripped the AI-tell detector">rerolled</span>`
@@ -1119,9 +1208,19 @@ function renderConversation(view) {
       const cls = t.roomControl.outcome === 'reclaimed' ? 'good' : t.roomControl.outcome === 'partial' ? 'warn' : 'bad';
       chips.push(`<span class="chip ${cls}">room: ${t.roomControl.outcome}</span>`);
     }
+    // Light up the exact words that fired the investor's next question.
+    //
+    // The mechanism is the most convincing thing here and it was invisible: a
+    // conviction firing looks like luck until you can see the phrase that
+    // triggered it sitting in your own sentence. The triggers come from the
+    // FOLLOWING investor turn, which is the one that reacted to this answer.
+    const nextInvestor = view.turns[index + 1];
+    const triggers =
+      nextInvestor && nextInvestor.role === 'investor' ? nextInvestor.matchedTriggers : null;
+
     return `<div class="turn founder">
       <div class="who">You</div>
-      <div class="body">${esc(t.text)}</div>
+      <div class="body">${markTriggers(t.text, triggers)}</div>
       ${chips.length ? `<div class="annot">${chips.join('')}</div>` : ''}
     </div>`;
   }).join('');
@@ -1266,6 +1365,28 @@ function renderPanel(view) {
           <span class="v">${m.convictionTurns}</span>
         </div>
       </div>
+
+      ${
+        view.grounding && view.grounding.corpus && view.grounding.corpus.titles
+          ? `<div class="wall" title="Every document the persona was built from. Lit = produced a conviction.">
+               ${view.grounding.corpus.titles
+                 .map((t) => `<i class="${t.cited ? 'lit' : ''}" title="${esc(t.title)}"></i>`)
+                 .join('')}
+             </div>
+             <div class="wallkey">
+               <span>${view.grounding.corpus.titles.length} essays read</span>
+               <span><i class="lit"></i> ${view.grounding.corpus.titles.filter((t) => t.cited).length} produced a conviction</span>
+             </div>
+             ${
+               view.grounding.corpus.canon && view.grounding.corpus.canon.length
+                 ? `<div class="canon">${view.grounding.corpus.canon
+                     .slice(0, 8)
+                     .map((c) => `<span>${esc(c)}</span>`)
+                     .join('')}</div>`
+                 : ''
+             }`
+          : ''
+      }
     </section>
 
     ${delta ? `

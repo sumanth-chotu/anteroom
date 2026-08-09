@@ -145,6 +145,12 @@ export function sessionView(session: SessionState, usageAtStart: UsageSnapshot) 
       tellScore: t.tellScore ?? null,
       regenerated: t.regenerated ?? false,
       convictionBelief: t.convictionBelief ?? null,
+      // The evidence, so the UI can show the actual line from their writing
+      // rather than asking the audience to trust that one exists.
+      convictionQuote: t.convictionQuote ?? null,
+      convictionSource: t.convictionSource ?? null,
+      convictionUrl: t.convictionUrl ?? null,
+      matchedTriggers: t.matchedTriggers ?? null,
     })),
     ledger: session.ledger.claims.map((c) => ({
       id: c.id,
@@ -196,6 +202,16 @@ export function sessionView(session: SessionState, usageAtStart: UsageSnapshot) 
                 label: session.briefing.corpus.corpus.label,
                 documents: session.briefing.corpus.corpus.documents,
                 convictions: session.briefing.corpus.convictions.length,
+                // Every document title, flagged with whether it produced a
+                // conviction. Rendering the whole corpus is what makes "it read
+                // all of them" land — a count is a claim, a wall is evidence.
+                titles: session.briefing.corpus.corpus.titles.map((title) => ({
+                  title,
+                  cited: session.briefing!.corpus!.convictions.some(
+                    (c) => c.sourceTitle === title,
+                  ),
+                })),
+                canon: session.briefing.corpus.canon,
               }
             : null,
           dossier: session.briefing.dossier
