@@ -23,7 +23,7 @@ import {
 } from '../session/session.ts';
 import { runChecks } from '../ledger/checks.ts';
 import { usageSummary } from '../xai/client.ts';
-import { ARCHETYPES, DEFAULT_ARCHETYPE, type ArchetypeId } from '../investor/archetypes.ts';
+import { DEFAULT_PROFILE_ID, PROFILES, getProfile, isChaotic } from '../investor/profiles.ts';
 
 const C = {
   dim: (s: string) => `\x1b[2m${s}\x1b[0m`,
@@ -35,16 +35,42 @@ const C = {
   grey: (s: string) => `\x1b[90m${s}\x1b[0m`,
 };
 
-const ALIASES: Record<string, ArchetypeId> = {
+const ALIASES: Record<string, string> = {
   generalist: 'seed_generalist',
   skeptic: 'seed_skeptic',
   angel: 'technical_angel',
+  thesis: 'thesis_macro',
+  accelerator: 'accelerator_operator',
+  solo: 'solo_capitalist',
+  blowhard: 'incubator_blowhard',
+  chaos: 'incubator_blowhard',
 };
 
 const args = process.argv.slice(2);
 const debug = args.includes('--debug');
-const archetypeId = ALIASES[args.find((a) => !a.startsWith('--')) ?? ''] ?? DEFAULT_ARCHETYPE;
-const archetype = ARCHETYPES[archetypeId];
+
+const KIND_LABEL = {
+  synthetic: 'composite archetypes',
+  derived: 'derived from public investor behaviour',
+  character: 'unserious — trains room control',
+} as const;
+
+if (args.includes('--list')) {
+  console.log('\n\x1b[1mInvestor profiles\x1b[0m\n');
+  for (const kind of ['synthetic', 'derived', 'character'] as const) {
+    console.log(`  \x1b[2m${KIND_LABEL[kind]}\x1b[0m`);
+    for (const p of PROFILES.filter((x) => x.kind === kind)) {
+      const alias = Object.entries(ALIASES).find(([, id]) => id === p.id)?.[0] ?? p.id;
+      console.log(`    \x1b[1m${alias.padEnd(13)}\x1b[0m ${p.name} \x1b[2m— ${p.blurb}\x1b[0m`);
+    }
+    console.log();
+  }
+  process.exit(0);
+}
+
+const requested = args.find((a) => !a.startsWith('--')) ?? '';
+const profileId = ALIASES[requested] ?? (requested || DEFAULT_PROFILE_ID);
+const profile = getProfile(profileId);
 
 function wrap(text: string, width = 76, indent = '  '): string {
   const words = text.split(/\s+/);
@@ -63,11 +89,12 @@ function wrap(text: string, width = 76, indent = '  '): string {
 }
 
 console.log(`\n${C.bold('RADAR')} ${C.dim('· seed pitch practice · phase 0 text harness')}`);
-console.log(`${C.dim('Investor:')} ${C.bold(archetype.name)} — ${C.dim(archetype.blurb)}`);
+console.log(`${C.dim('Investor:')} ${C.bold(profile.name)} — ${C.dim(profile.blurb)}`);
+if (profile.provenance) console.log(C.grey(`  ${profile.provenance.disclaimer}`));
 console.log(C.dim(`Type your answers. "quit" to end early and see the debrief.\n`));
 
 const input = await openInput();
-let session = createSession(archetypeId);
+let session = createSession(profileId);
 
 try {
   while (true) {
@@ -97,6 +124,11 @@ try {
       }
       for (const finding of result.newFindings) {
         console.log(C.red(`  [!! ${finding.kind}: ${finding.summary}]`));
+      }
+      const rc = result.session.turns.at(-1)?.roomControl;
+      if (rc) {
+        const colour = rc.outcome === 'reclaimed' ? C.green : rc.outcome === 'partial' ? C.yellow : C.red;
+        console.log(C.grey(`  [room control: ${colour(rc.outcome)} — ${rc.note}]`));
       }
     }
     console.log();
@@ -142,6 +174,21 @@ if (findings.length === 0) {
     const tag = finding.severity === 'high' ? C.red('HIGH') : finding.severity === 'medium' ? C.yellow('MED ') : C.grey('LOW ');
     console.log(`    ${tag} ${finding.summary}`);
     console.log(C.grey(`         → "${finding.probe}"`));
+  }
+}
+
+if (metrics.chaotic) {
+  console.log(`\n${C.bold('  Room control')} ${C.dim('— did you get the meeting back?')}`);
+  if (metrics.derailsJudged === 0) {
+    console.log(C.grey('    They never derailed. Lucky.'));
+  } else {
+    const score = Math.round(metrics.roomControlScore * 100);
+    const colour = score >= 70 ? C.green : score >= 40 ? C.yellow : C.red;
+    console.log(
+      `    reclaimed ${C.green(String(metrics.reclaimed))} · partial ${C.yellow(String(metrics.partial))} · ` +
+        `followed ${C.red(String(metrics.followed))}  →  ${colour(`${score}%`)}`,
+    );
+    for (const note of metrics.roomControlNotes) console.log(C.grey(`    · ${note}`));
   }
 }
 

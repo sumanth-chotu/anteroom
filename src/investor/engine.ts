@@ -19,10 +19,10 @@ import { chat } from '../xai/client.ts';
 import type { Finding, Ledger } from '../ledger/types.ts';
 import { findingKey, unraisedFindings } from '../ledger/checks.ts';
 import { SEED_SPINE, topicById, type SpineTopic, type SpineTopicId } from './spine.ts';
-import { buildSystemPrompt, type Archetype } from './archetypes.ts';
+import { buildSystemPrompt, type InvestorProfile } from './profiles.ts';
 import type { SatisfactionVerdict } from './satisfaction.ts';
 
-export type QuestionLayer = 'contradiction' | 'follow_up' | 'spine' | 'wrap_up';
+export type QuestionLayer = 'contradiction' | 'derail' | 'follow_up' | 'spine' | 'wrap_up';
 
 export interface NextMove {
   layer: QuestionLayer;
@@ -45,6 +45,12 @@ export interface EngineState {
   currentTopic?: SpineTopicId;
   /** Consecutive follow-ups on the current topic. */
   followUpCount: number;
+  /** Moves issued so far. Seeds the derail roll, keeping sessions reproducible. */
+  moveCount: number;
+  /** True when the previous move was a derail — prevents two in a row. */
+  justDerailed: boolean;
+  /** Derails issued, for the room-control metric. */
+  derailCount: number;
 }
 
 export function initialState(): EngineState {
@@ -54,7 +60,26 @@ export function initialState(): EngineState {
     dodged: new Set(),
     raisedFindings: new Set(),
     followUpCount: 0,
+    moveCount: 0,
+    justDerailed: false,
+    derailCount: 0,
   };
+}
+
+/**
+ * Deterministic 0–1 roll from a seed.
+ *
+ * Not Math.random(): the eval suite replays sessions and needs identical
+ * behaviour every run, so derailment has to be reproducible rather than merely
+ * random-looking.
+ */
+function roll(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 10_000) / 10_000;
 }
 
 /**
@@ -64,7 +89,7 @@ export function initialState(): EngineState {
 export function selectMove(
   state: EngineState,
   ledger: Ledger,
-  archetype: Archetype,
+  profile: InvestorProfile,
   lastVerdict?: SatisfactionVerdict,
 ): NextMove {
   // Layer 1 — a contradiction outranks everything else.
@@ -82,12 +107,38 @@ export function selectMove(
     };
   }
 
+  // Layer 2 — derailment.
+  //
+  // Chaotic profiles hijack the meeting. This is not a gag: it trains the one
+  // skill the serious profiles cannot test — whether the founder can take back a
+  // room that has been taken from them. Plenty of real meetings go this way, and
+  // a founder who folds every time an investor starts talking about themselves
+  // will lose thirty minutes they never get back.
+  //
+  // A contradiction still outranks it: even a blowhard notices a number moving.
+  const canDerail = profile.derailment > 0 && !state.justDerailed && state.moveCount > 0;
+  if (canDerail && roll(`${profile.id}:${state.moveCount}`) < profile.derailment) {
+    return {
+      layer: 'derail',
+      directive:
+        `Hijack the conversation. Do not ask about their company this turn.\n\n` +
+        `Go off on something adjacent — a story about yourself, an opinion you want to air, ` +
+        `a tangent their last answer reminded you of. ` +
+        (profile.selfRegard > 0.7
+          ? `Make it mostly about you.\n\n`
+          : `Keep it brief and come back toward the topic at the end.\n\n`) +
+        `Two or three sentences at most. Do not ask a question about their business. ` +
+        `You may end on a rhetorical question or trail off — the founder should have to ` +
+        `decide whether to follow you or pull the meeting back.`,
+    };
+  }
+
   // Layer 3 — the last answer did not land, and we have budget to push.
   if (
     lastVerdict &&
     !lastVerdict.satisfied &&
     state.currentTopic &&
-    state.followUpCount < archetype.followUpDepth
+    state.followUpCount < profile.followUpDepth
   ) {
     const topic = topicById(state.currentTopic);
     const dodged = lastVerdict.answered === 'dodged' || lastVerdict.answered === 'non_answer';
@@ -152,9 +203,14 @@ export function applyMove(
   let currentTopic = state.currentTopic;
   let followUpCount = state.followUpCount;
 
+  let derailCount = state.derailCount;
+
   if (move.layer === 'contradiction' && move.finding) {
     raisedFindings.add(findingKey(move.finding));
     // A contradiction interrupts without consuming the topic's follow-up budget.
+  } else if (move.layer === 'derail') {
+    derailCount += 1;
+    // A derail costs the founder a turn but does not advance or close a topic.
   } else if (move.layer === 'spine' && move.topicId) {
     // Moving on from an unanswered topic records it as dodged, not covered.
     if (currentTopic && !satisfied.has(currentTopic)) dodged.add(currentTopic);
@@ -172,7 +228,16 @@ export function applyMove(
     followUpCount = 0;
   }
 
-  const next: EngineState = { asked, satisfied, dodged, raisedFindings, followUpCount };
+  const next: EngineState = {
+    asked,
+    satisfied,
+    dodged,
+    raisedFindings,
+    followUpCount,
+    moveCount: state.moveCount + 1,
+    justDerailed: move.layer === 'derail',
+    derailCount,
+  };
   if (currentTopic) next.currentTopic = currentTopic;
   return next;
 }
@@ -189,13 +254,13 @@ export interface Turn {
  * it carries operator authority and cannot be confused with founder speech.
  */
 export async function speak(
-  archetype: Archetype,
+  profile: InvestorProfile,
   history: Turn[],
   move: NextMove,
   opening = false,
 ): Promise<string> {
   const messages = [
-    { role: 'system' as const, content: buildSystemPrompt(archetype) },
+    { role: 'system' as const, content: buildSystemPrompt(profile) },
     ...history.map((turn) => ({
       role: turn.role === 'investor' ? ('assistant' as const) : ('user' as const),
       content: turn.text,

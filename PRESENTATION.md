@@ -190,3 +190,47 @@ Good material — all three are quality bugs unit tests would have passed:
    Precisely the miscalibration the product exists to prevent.
 3. **Follow-up loop never let go** — burned a whole session on one topic. The fix produced the
    best line in the transcript.
+
+---
+
+## Slide: investor profiles (and the one that steals the show)
+
+Seven profiles, three kinds — **synthetic** composites, **derived** styles distilled from
+public investor behaviour, and one **character**.
+
+**The naming decision is worth a beat on stage.** Derived profiles model a *pattern*, never a
+named person: a simulation is a caricature, not a prediction, and putting fabricated quotes in
+a real investor's mouth is both inaccurate and a legal problem at ship time. Every profile
+carries provenance. The system supports named real people; that is deliberately a launch
+decision, not an engineering default. *Good answer to have ready — someone will ask.*
+
+### The incubator blowhard — a joke that turned into a feature
+
+The serious profiles test whether your **answers** hold up. The blowhard tests whether you can
+hold the **room**. That is a different skill, it is under-practised, and plenty of real
+meetings genuinely go this way.
+
+Real unedited output:
+
+> *"Retention. When I sold my company — eight figures if you count the earnout the way any
+> rational person would — half the team stuck around for the pizza and left the second the wire
+> cleared, which taught me more about loyalty than any board deck ever did. I still think about
+> that closing dinner at the old Boulevard, the one with the bad wine and the guy from Sequoia
+> who never called me back."*
+
+The "accidentally sharp, then ruins it" quirk firing on its own:
+
+> *"Never got a straight answer on why now, but fine. When I sold my company — eight figures if
+> you squint — the whole room disagreed with me until the wire hit."*
+
+**It has its own metric.** Room control, judged after every derail:
+`reclaimed` / `partial` / `followed`, scored `(reclaimed + 0.5 × partial) / judged`. Politely
+engaging a tangent at length and never returning counts as **followed** — charm is not control.
+
+**The number that lands:** in that session the blowhard had a **talk ratio of 0.3:1** — he
+talked three times more than the founder. The entire premise, in one measurement. Coverage told
+the rest: 2 topics asked, both dodged, 5 never reached. The meeting was wasted, and the debrief
+says so plainly.
+
+*Demo idea: run the same founder answers through `skeptic` and `blowhard` back to back. Same
+input, two completely different failure modes, two different metrics.*

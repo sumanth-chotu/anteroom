@@ -122,3 +122,78 @@ export async function judgeAnswer(
     satisfied: data.answered === 'answered' && data.specificity === 'concrete',
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Room control
+//
+// Only runs after a derail turn. Chaotic profiles hijack the meeting, and the
+// skill being trained is whether the founder takes it back — a real and
+// under-practised one. Folding every time an investor starts talking about
+// themselves costs a founder the half hour they came for.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type RoomControlOutcome = 'reclaimed' | 'partial' | 'followed';
+
+const RoomControl = z.object({
+  outcome: z.enum(['reclaimed', 'partial', 'followed']),
+  note: z.string(),
+});
+
+export type RoomControlVerdict = z.infer<typeof RoomControl>;
+
+const roomControlJsonSchema = {
+  type: 'object',
+  properties: {
+    outcome: {
+      type: 'string',
+      enum: ['reclaimed', 'partial', 'followed'],
+      description:
+        'reclaimed = acknowledged the tangent briefly (or ignored it) and steered back to their ' +
+        'company with something substantive. partial = engaged the tangent but eventually got ' +
+        'back. followed = went along with the tangent and never returned.',
+    },
+    note: { type: 'string', description: 'One short sentence on what they did.' },
+  },
+  required: ['outcome', 'note'],
+  additionalProperties: false,
+};
+
+const ROOM_CONTROL_SYSTEM = `
+An investor has just derailed a pitch meeting — talking about themselves, telling
+a war story, or airing an unrelated opinion instead of asking about the company.
+
+Judge what the founder did next.
+
+Reclaiming the room does NOT mean being rude or ignoring the investor. The best
+founders acknowledge the tangent in a few words and then steer straight back to
+something substantive about their business. That is "reclaimed".
+
+Politely engaging the tangent at length and never returning is "followed", even
+if the founder was charming while doing it. Charm is not control.
+`.trim();
+
+export async function judgeRoomControl(
+  derailText: string,
+  answer: string,
+): Promise<RoomControlVerdict> {
+  const { data } = await chatStructured(
+    [
+      { role: 'system', content: ROOM_CONTROL_SYSTEM },
+      {
+        role: 'user',
+        content:
+          `<investor_derail>\n${derailText}\n</investor_derail>\n\n` +
+          `<founder_response>\n${answer}\n</founder_response>`,
+      },
+    ],
+    RoomControl,
+    roomControlJsonSchema,
+    {
+      schemaName: 'room_control',
+      tag: 'investor:room_control',
+      reasoningEffort: 'low',
+      maxTokens: 1024,
+    },
+  );
+  return data;
+}

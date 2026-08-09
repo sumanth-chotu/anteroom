@@ -169,3 +169,42 @@ evasive pitch.
 1,686 completion. Roughly **$0.07/session** at grok-4.5 rates.
 
 **Next:** Adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).
+
+---
+
+## 2026-08-08 — Investor profiles + the derail mechanic
+
+**Phase:** 0 · **Commit:** pending
+
+**What:** Replaced the fixed three-archetype enum with a profile system. Seven profiles across
+three kinds: synthetic (the original three), derived (three styles distilled from public
+investor behaviour), character (the incubator blowhard). Added `derailment` and `selfRegard`
+dials, a `derail` question layer, and a room-control judge.
+
+**Why — the naming decision.** Derived profiles model an interaction *pattern*, never a named
+person. A simulation is a caricature, not a prediction, and attributing fabricated quotes to a
+named real investor is both inaccurate and a publicity-rights problem the moment it ships. So
+profiles are named for the style ("The thesis guy"), carry a `provenance` block recording the
+public material behind them, and never assert identity. The system *would* support named real
+people — that is a launch decision, deliberately left out of the engineering.
+
+**Why the meme VC is not a gag.** The serious profiles test whether your *answers* hold up. The
+blowhard tests whether you can hold the *room* — a different and under-practised skill. Plenty
+of real meetings go exactly this way. So it gets its own scoring axis rather than being graded
+on the pitch rubric it is designed to prevent you completing.
+
+The derail roll is **seeded on profile id + move count, not `Math.random()`** — the eval suite
+replays sessions and needs identical behaviour across runs.
+
+**Learned:** the blowhard produced better output than the serious profiles, which was not
+expected. Sample: *"When I sold my company — eight figures if you count the earnout the way any
+rational person would — half the team stuck around for the pizza and left the second the wire
+cleared."* The "accidentally sharp, then ruins it" quirk also fired unprompted: *"Never got a
+straight answer on why now, but fine."*
+
+**Measured (blowhard session):** room control 2/2 reclaimed · **talk ratio 0.3:1** — he talked
+three times more than the founder, which turns the entire premise into a single number.
+Coverage told the real story: 2 topics asked, both dodged, 5 never reached. The meeting was
+wasted, and the debrief says so.
+
+**Next:** adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).

@@ -182,33 +182,98 @@ S3 or R2 (slide PNGs, audio). Self-hostable if the confidentiality posture in §
 
 ## 3. The investor brain (seed)
 
-### 3.1 Three seed archetypes
+### 3.1 Investor profiles
 
-All write $250k–$2M into pre-revenue or barely-revenue companies. None will ask about net
-revenue retention.
+A profile is the whole personality across the table: temperament, what they press
+on, how long they let you talk, and how likely they are to hijack the meeting.
+Three kinds.
 
-| Archetype | Temperament | Opens with | Kills you on |
-|---|---|---|---|
-| **Seed generalist** | Warm, story-first, founder-driven | "Why you two, why now?" | Founder-market fit, conviction, why-now |
-| **Seed skeptic** | Seen 40 of these this month; pattern-matches to failures | "What makes this different from [competitor]?" | Category objections (§4), "feature not a company" |
-| **Technical angel** | Has actually built in this space | "What's genuinely hard here?" | The wedge, "we use AI" hand-waving, moat |
+**Synthetic** — composite seed archetypes we authored. The default.
 
-The **seed skeptic** is powered by the category brief — the archetype that opens with *"Three
-companies pitched me this exact thing this quarter, and the last one got roasted for
-deliverability. Why are you different?"*
+| Profile | Temperament | Kills you on |
+|---|---|---|
+| **Seed generalist** | Warm, story-first | Founder-market fit, why-now |
+| **Seed skeptic** | Cold, impatient, 40 pitches a month | Category objections (§4), "feature not a company" |
+| **Technical angel** | Peer-level, precise | The wedge, "we use AI" hand-waving |
+
+**Derived** — interaction styles distilled from publicly observable investor
+behaviour: posts, talks, essays, recorded office hours.
+
+| Profile | Opens by | Kills you on |
+|---|---|---|
+| **The thesis guy** | Zooming out to the macro wave | "Why isn't this ten times bigger?" |
+| **The accelerator partner** | "Have you talked to users?" | Abstraction, no shipping cadence |
+| **The solo GP** | What the category is saying publicly | Distribution, founder-led attention |
+
+> ⚠️ **Derived profiles model a *pattern*, never a named person.**
+>
+> A simulation is a caricature, not a prediction. Attributing fabricated quotes
+> to a named real investor is both inaccurate and a publicity-rights problem the
+> moment it ships. So profiles are named for the style, carry a `provenance`
+> block recording the public material behind them, and never assert identity.
+>
+> The system would support named real people. That is a **launch decision, not an
+> engineering one** — it should be made deliberately rather than by default.
+
+**Character** — deliberately unserious, and more useful than it sounds.
+
+| Profile | What it is | What it trains |
+|---|---|---|
+| **The incubator blowhard** | Loud, self-mythologising, barely listening | Taking back a hijacked room |
+
+The serious profiles test whether your *answers* hold up. The blowhard tests
+whether you can hold the *room* — a genuinely different and under-practised
+skill. Plenty of real meetings go this way, and a founder who folds every time an
+investor starts talking about themselves loses the half hour they came for. It is
+scored on its own axis (§3.6), not on the pitch rubric.
 
 ```ts
-interface Archetype {
-  id: 'seed_generalist' | 'seed_skeptic' | 'technical_angel';
-  systemPrompt: string;
-  warmth: number;                 // 0–1; modulated by pre-read posture (§6.5)
+interface InvestorProfile {
+  id: string;
+  name: string;
+  kind: 'synthetic' | 'derived' | 'character';
+  persona: string;
+  warmth: number;               // 0-1
   interruptThresholdMs: number;
-  followUpDepth: number;          // 2–4
+  followUpDepth: number;
+  derailment: number;           // 0-1 — chance of hijacking a turn
+  selfRegard: number;           // 0-1 — how much of that is about them
+  quirks: readonly string[];    // behavioural tics, injected verbatim
   useCategoryBrief: boolean;
-  deckAggression: number;         // how readily they jump back to slides
-  voice: string;
+  provenance?: Provenance;      // required on derived + character
 }
 ```
+
+### 3.6 Derailment and room control
+
+Profiles with `derailment > 0` can hijack a turn instead of asking a question.
+The roll is **seeded on profile id + move count, not `Math.random()`** — the eval
+suite replays sessions and needs identical behaviour every run.
+
+A contradiction still outranks a derail: even a blowhard notices a number moving.
+
+After any derail, a separate judge scores what the founder did next:
+
+| Outcome | Meaning |
+|---|---|
+| `reclaimed` | Acknowledged briefly (or ignored it) and steered back to something substantive |
+| `partial` | Engaged the tangent but eventually got back |
+| `followed` | Went along with it and never returned |
+
+Politely engaging at length and never returning counts as `followed`. **Charm is
+not control.** Score is `(reclaimed + 0.5 × partial) / judged`, reported only for
+chaotic profiles.
+
+Talk ratio doubles as a signal here — in testing the blowhard talked 3× more than
+the founder, which is the whole problem made measurable.
+
+### 3.7 Auto-deriving profiles
+
+Derived profiles are hand-authored today. The natural extension reuses the §4
+harvesting: an investor's public posts and talks *are* observable data on how
+they interact. `npm run derive-profile` drafts a profile from public material for
+human review — draft-for-review, never auto-publish, since the provenance and
+naming call needs a person in the loop.
 
 ### 3.2 The six-layer question engine
 

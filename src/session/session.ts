@@ -10,7 +10,12 @@
 import { extractClaims } from '../ledger/extract.ts';
 import { runChecks } from '../ledger/checks.ts';
 import { addClaim, emptyLedger, type Claim, type Finding, type Ledger } from '../ledger/types.ts';
-import { judgeAnswer, type SatisfactionVerdict } from '../investor/satisfaction.ts';
+import {
+  judgeAnswer,
+  judgeRoomControl,
+  type RoomControlVerdict,
+  type SatisfactionVerdict,
+} from '../investor/satisfaction.ts';
 import {
   applyMove,
   coverageReport,
@@ -21,7 +26,7 @@ import {
   type NextMove,
   type Turn,
 } from '../investor/engine.ts';
-import { ARCHETYPES, type Archetype, type ArchetypeId } from '../investor/archetypes.ts';
+import { getProfile, isChaotic, type InvestorProfile } from '../investor/profiles.ts';
 import { topicById } from '../investor/spine.ts';
 
 export interface SessionTurn extends Turn {
@@ -33,21 +38,23 @@ export interface SessionTurn extends Turn {
   verdict?: SatisfactionVerdict;
   /** Claims extracted from a founder turn. */
   claims?: Claim[];
+  /** Present when this answer followed a derail. */
+  roomControl?: RoomControlVerdict;
 }
 
 export interface SessionState {
   id: string;
-  archetype: Archetype;
+  profile: InvestorProfile;
   engine: EngineState;
   ledger: Ledger;
   turns: SessionTurn[];
   pendingMove?: NextMove;
 }
 
-export function createSession(archetypeId: ArchetypeId, sessionId = `s${Date.now()}`): SessionState {
+export function createSession(profileId: string, sessionId = `s${Date.now()}`): SessionState {
   return {
     id: sessionId,
-    archetype: ARCHETYPES[archetypeId],
+    profile: getProfile(profileId),
     engine: initialState(),
     ledger: emptyLedger(sessionId),
     turns: [],
@@ -62,10 +69,10 @@ export async function investorTurn(
   session: SessionState,
 ): Promise<{ session: SessionState; text: string; move: NextMove }> {
   const lastFounderTurn = [...session.turns].reverse().find((t) => t.role === 'founder');
-  const move = selectMove(session.engine, session.ledger, session.archetype, lastFounderTurn?.verdict);
+  const move = selectMove(session.engine, session.ledger, session.profile, lastFounderTurn?.verdict);
 
   const text = await speak(
-    session.archetype,
+    session.profile,
     session.turns.map(({ role, text }) => ({ role, text })),
     move,
     session.turns.length === 0,
@@ -98,10 +105,13 @@ export async function founderTurn(
 
   const turnId = nextTurnId();
 
+  const wasDerail = move?.layer === 'derail';
+
   // Independent — run concurrently. Matters inside a voice turn later.
-  const [claims, verdict] = await Promise.all([
+  const [claims, verdict, roomControl] = await Promise.all([
     extractClaims(answer, { sessionId: session.id, turnId }),
     judgeAnswer(question, answer, topic),
+    wasDerail ? judgeRoomControl(question, answer) : Promise.resolve(undefined),
   ]);
 
   const beforeKeys = new Set(runChecks(session.ledger).map((f) => f.summary));
@@ -116,6 +126,7 @@ export async function founderTurn(
     verdict,
     claims,
   };
+  if (roomControl) turn.roomControl = roomControl;
 
   const engine = applyMove(session.engine, move ?? { layer: 'spine', directive: '' }, verdict);
 
@@ -161,5 +172,32 @@ export function sessionMetrics(session: SessionState) {
     claimsCaptured: session.ledger.claims.length,
     contradictionsFound: runChecks(session.ledger).length,
     coverage: coverageReport(session.engine),
+    ...roomControlMetrics(session),
+  };
+}
+
+/**
+ * Room control — only meaningful for chaotic profiles.
+ *
+ * A founder who reclaims the room every time is ready for a bad meeting; one who
+ * follows every tangent will lose the half hour they came for.
+ */
+function roomControlMetrics(session: SessionState) {
+  if (!isChaotic(session.profile)) return { chaotic: false as const };
+
+  const judged = session.turns.flatMap((t) => (t.roomControl ? [t.roomControl] : []));
+  const reclaimed = judged.filter((r) => r.outcome === 'reclaimed').length;
+  const partial = judged.filter((r) => r.outcome === 'partial').length;
+
+  return {
+    chaotic: true as const,
+    derails: session.engine.derailCount,
+    derailsJudged: judged.length,
+    reclaimed,
+    partial,
+    followed: judged.filter((r) => r.outcome === 'followed').length,
+    /** Partial credit for eventually getting back. */
+    roomControlScore: judged.length ? (reclaimed + partial * 0.5) / judged.length : 1,
+    roomControlNotes: judged.map((r) => r.note),
   };
 }
