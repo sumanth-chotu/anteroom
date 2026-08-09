@@ -208,3 +208,41 @@ Coverage told the real story: 2 topics asked, both dodged, 5 never reached. The 
 wasted, and the debrief says so.
 
 **Next:** adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).
+
+---
+
+## 2026-08-08 — Testing UI (glass-box instrument panel)
+
+**Phase:** 0 · **Commit:** pending
+
+**What:** `npm run ui` → http://localhost:4317. Two panes: conversation on the left, every
+piece of machinery exposed live on the right.
+
+- `src/server/server.ts` — plain Node HTTP server, in-memory sessions, per-session lock
+- `src/server/view.ts` — explicit view model (SessionState holds Sets that don't serialize)
+- `src/server/public/index.html` — single self-contained page, vanilla JS, no build step
+
+Panel shows: profile card with behavioural dials and provenance · live spine coverage
+(satisfied / asking / dodged / unasked) · findings with severity and probe text · claim ledger ·
+room control (chaotic profiles only) · deterministic metrics · token usage and estimated cost.
+Conversation turns are annotated inline — layer tag on investor turns, verdict + extracted
+claims on founder turns.
+
+**Why plain Node over Next.js.** No build step, no new dependencies, and session state lives in
+the same process as the engine so there's no serialization boundary to debug. More importantly
+Phase 2 needs a long-lived process for the WebSocket relay anyway (PLAN.md §2.3) — which Vercel
+serverless could not host. This server becomes that host. Next.js can wrap the founder-facing
+product later; this is the instrument panel, not the product.
+
+The view model is built explicitly rather than by serializing `SessionState`: it holds Sets and
+would silently JSON.stringify to `{}`, and keeping it explicit stops the UI depending on engine
+internals that are still moving.
+
+Turns are serialized per session with a promise lock — a double-submit would interleave two
+`founderTurn` calls and corrupt engine state.
+
+**Learned:** seeing the layer tags inline makes engine behaviour legible in a way the CLI
+`--debug` output never did. Watching `spine → spine → contradiction` fire in sequence, with the
+claim chips appearing on the turn that caused it, is the whole system explaining itself.
+
+**Next:** adversarial founder eval suite, then Phase 1 (deck ingestion + pre-read).

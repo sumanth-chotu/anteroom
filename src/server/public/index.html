@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar — testing UI</title>
+<style>
+  :root {
+    --bg: #0d0f12;
+    --panel: #14171c;
+    --panel-2: #1a1e24;
+    --line: #262b33;
+    --text: #e4e7ec;
+    --dim: #8b94a3;
+    --faint: #5a6373;
+    --accent: #6ea8fe;
+    --investor: #7dd3fc;
+    --founder: #e4e7ec;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --green: #4ade80;
+    --purple: #c084fc;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 18px; border-bottom: 1px solid var(--line);
+    background: var(--panel); flex: none;
+  }
+  .brand { font-weight: 650; letter-spacing: .18em; font-size: 12px; }
+  .brand span { color: var(--faint); font-weight: 400; letter-spacing: .04em; margin-left: 10px; }
+  header .spacer { flex: 1; }
+
+  select, button, textarea {
+    font: inherit; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px;
+  }
+  select { max-width: 340px; }
+  button { cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); color: #08111f; border-color: var(--accent); font-weight: 600; }
+
+  main { flex: 1; display: grid; grid-template-columns: minmax(0,1fr) 400px; min-height: 0; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } aside { display: none; } }
+
+  /* ── conversation ── */
+  .conv { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+  .scroll { flex: 1; overflow-y: auto; padding: 22px 26px; }
+  .turn { margin-bottom: 20px; max-width: 62ch; }
+  .turn .who {
+    font: 600 10px/1 var(--mono); letter-spacing: .13em; text-transform: uppercase;
+    color: var(--faint); margin-bottom: 6px; display: flex; gap: 8px; align-items: center;
+  }
+  .turn.investor .who { color: var(--investor); }
+  .turn.investor .body { color: var(--investor); }
+  .turn.founder { margin-left: auto; }
+  .turn.founder .body {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 13px;
+  }
+  .body { white-space: pre-wrap; }
+
+  .tag {
+    font: 600 9px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 6px; border-radius: 4px; border: 1px solid currentColor;
+  }
+  .tag.contradiction { color: var(--red); }
+  .tag.derail        { color: var(--purple); }
+  .tag.follow_up     { color: var(--amber); }
+  .tag.spine         { color: var(--accent); }
+  .tag.wrap_up       { color: var(--faint); }
+
+  .annot { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: 500 10px/1.5 var(--mono); padding: 2px 7px; border-radius: 4px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--dim);
+  }
+  .chip.good { color: var(--green); border-color: #1e4030; }
+  .chip.warn { color: var(--amber); border-color: #453413; }
+  .chip.bad  { color: var(--red);   border-color: #4a2020; }
+  .chip.claim { color: var(--accent); border-color: #1e3352; }
+
+  .composer { border-top: 1px solid var(--line); padding: 14px 26px; background: var(--panel); flex: none; }
+  .composer .row { display: flex; gap: 10px; align-items: flex-end; }
+  textarea { flex: 1; resize: none; min-height: 62px; max-height: 200px; line-height: 1.5; }
+  .hint { font: 10px/1 var(--mono); color: var(--faint); margin-top: 7px; letter-spacing: .04em; }
+
+  /* ── instrument panel ── */
+  aside { overflow-y: auto; background: var(--panel); }
+  section { border-bottom: 1px solid var(--line); padding: 15px 18px; }
+  h2 {
+    font: 600 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 11px;
+  }
+  .kv { display: flex; justify-content: space-between; gap: 12px; font: 12px/1.9 var(--mono); }
+  .kv .k { color: var(--dim); }
+  .kv .v { color: var(--text); }
+  .kv .v.bad { color: var(--red); } .kv .v.warn { color: var(--amber); } .kv .v.good { color: var(--green); }
+
+  .profile-kind {
+    display: inline-block; font: 600 9px/1 var(--mono); letter-spacing: .1em;
+    text-transform: uppercase; padding: 3px 6px; border-radius: 4px; margin-bottom: 8px;
+  }
+  .profile-kind.synthetic { color: var(--accent);  background: #12203a; }
+  .profile-kind.derived   { color: var(--green);   background: #122b1e; }
+  .profile-kind.character { color: var(--purple);  background: #251a38; }
+  .prov { font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 8px; font-style: italic; }
+
+  .dial { display: grid; grid-template-columns: 74px 1fr 30px; gap: 8px; align-items: center; margin-bottom: 5px; }
+  .dial .name { font: 10px/1 var(--mono); color: var(--dim); letter-spacing: .04em; }
+  .bar { height: 4px; background: var(--panel-2); border-radius: 2px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .dial .num { font: 10px/1 var(--mono); color: var(--faint); text-align: right; }
+
+  .spine li { list-style: none; display: flex; gap: 8px; align-items: baseline; font-size: 12px; padding: 2px 0; }
+  .spine ul { margin: 0; padding: 0; }
+  .mark { font: 700 11px/1.4 var(--mono); width: 12px; flex: none; }
+  .s-satisfied .mark { color: var(--green); }
+  .s-dodged    .mark { color: var(--red); }
+  .s-asking    .mark { color: var(--amber); }
+  .s-unasked   { color: var(--faint); }
+  .s-unasked .mark { color: var(--faint); }
+  .s-dodged .label { color: var(--red); }
+
+  .finding { border-left: 2px solid var(--line); padding: 2px 0 2px 10px; margin-bottom: 11px; }
+  .finding.high   { border-color: var(--red); }
+  .finding.medium { border-color: var(--amber); }
+  .finding.low    { border-color: var(--faint); }
+  .finding .sum { font-size: 12px; line-height: 1.45; }
+  .finding .probe { font-size: 11px; color: var(--faint); font-style: italic; margin-top: 4px; line-height: 1.45; }
+
+  table.ledger { width: 100%; border-collapse: collapse; font: 11px/1.6 var(--mono); }
+  table.ledger td { padding: 2px 0; vertical-align: top; }
+  table.ledger td.m { color: var(--dim); padding-right: 8px; }
+  table.ledger td.v { color: var(--text); text-align: right; white-space: nowrap; }
+
+  .empty { color: var(--faint); font-size: 12px; font-style: italic; }
+  .err { color: var(--red); font-size: 12px; padding: 8px 26px; }
+  .spinner { display: inline-block; width: 9px; color: var(--faint); font-family: var(--mono); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">RADAR <span>seed pitch practice · testing UI</span></div>
+  <div class="spacer"></div>
+  <select id="profile"></select>
+  <button id="start" class="primary">New session</button>
+  <button id="export" disabled>Export</button>
+</header>
+
+<main>
+  <div class="conv">
+    <div class="scroll" id="scroll">
+      <p class="empty" style="padding:40px 0;text-align:center">
+        Pick an investor and start a session.
+      </p>
+    </div>
+    <div id="error" class="err" hidden></div>
+    <div class="composer">
+      <div class="row">
+        <textarea id="answer" placeholder="Your answer…" disabled></textarea>
+        <button id="send" disabled>Send</button>
+      </div>
+      <div class="hint">⌘/ctrl + enter to send</div>
+    </div>
+  </div>
+
+  <aside id="panel"></aside>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct = (n) => `${Math.round((n ?? 0) * 100)}%`;
+
+let sessionId = null;
+let busy = false;
+
+// ── profiles ────────────────────────────────────────────────────────────────
+const KIND_ORDER = { synthetic: 0, derived: 1, character: 2 };
+const KIND_LABEL = {
+  synthetic: 'Composite archetypes',
+  derived: 'Derived from public behaviour',
+  character: 'Unserious — trains room control',
+};
+
+const { profiles } = await (await fetch('/api/profiles')).json();
+profiles.sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
+for (const kind of ['synthetic', 'derived', 'character']) {
+  const group = document.createElement('optgroup');
+  group.label = KIND_LABEL[kind];
+  for (const p of profiles.filter((x) => x.kind === kind)) {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    group.appendChild(opt);
+  }
+  $('profile').appendChild(group);
+}
+$('profile').value = 'seed_skeptic';
+
+// ── networking ──────────────────────────────────────────────────────────────
+function setBusy(on) {
+  busy = on;
+  $('send').disabled = on || !sessionId;
+  $('answer').disabled = on || !sessionId;
+  $('start').disabled = on;
+  if (!on && sessionId) $('answer').focus();
+}
+
+function showError(message) {
+  const el = $('error');
+  el.hidden = !message;
+  el.textContent = message ?? '';
+}
+
+async function call(url, options) {
+  const res = await fetch(url, options);
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  return body;
+}
+
+$('start').onclick = async () => {
+  setBusy(true); showError(null);
+  $('scroll').innerHTML = '<p class="empty" style="padding:40px 0;text-align:center">Opening the meeting<span class="spinner">…</span></p>';
+  try {
+    const view = await call('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId: $('profile').value }),
+    });
+    sessionId = view.id;
+    $('export').disabled = false;
+    render(view);
+  } catch (error) {
+    showError(error.message);
+    $('scroll').innerHTML = '';
+  } finally {
+    setBusy(false);
+  }
+};
+
+async function send() {
+  const answer = $('answer').value.trim();
+  if (!answer || busy || !sessionId) return;
+  $('answer').value = '';
+  appendPending(answer);
+  setBusy(true); showError(null);
+  try {
+    render(await call(`/api/sessions/${sessionId}/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer }),
+    }));
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+$('send').onclick = send;
+$('answer').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+});
+$('export').onclick = () => { if (sessionId) location.href = `/api/sessions/${sessionId}/export`; };
+
+// Optimistic echo so the transcript doesn't stall while the model thinks.
+function appendPending(text) {
+  const scroll = $('scroll');
+  scroll.insertAdjacentHTML('beforeend', `
+    <div class="turn founder"><div class="who">You</div><div class="body">${esc(text)}</div></div>
+    <div class="turn investor"><div class="who">Investor</div>
+      <div class="body" style="color:var(--faint)">thinking<span class="spinner">…</span></div></div>`);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+// ── rendering ───────────────────────────────────────────────────────────────
+function render(view) {
+  renderConversation(view);
+  renderPanel(view);
+}
+
+function renderConversation(view) {
+  const html = view.turns.map((t) => {
+    if (t.role === 'investor') {
+      return `<div class="turn investor">
+        <div class="who">Investor ${t.layer ? `<span class="tag ${t.layer}">${t.layer.replace('_', ' ')}</span>` : ''}</div>
+        <div class="body">${esc(t.text)}</div>
+      </div>`;
+    }
+    const chips = [];
+    if (t.verdict) {
+      const v = t.verdict;
+      const cls = v.satisfied ? 'good' : v.answered === 'dodged' || v.answered === 'non_answer' ? 'bad' : 'warn';
+      chips.push(`<span class="chip ${cls}">${v.answered.replace('_', ' ')} · ${v.specificity.replace('_', ' ')}</span>`);
+      if (v.missing) chips.push(`<span class="chip">missing: ${esc(v.missing)}</span>`);
+    }
+    for (const c of t.claims) {
+      chips.push(`<span class="chip claim">${esc(c.metric.replace(/_/g, ' '))} = ${esc(c.valueRaw)}</span>`);
+    }
+    if (t.roomControl) {
+      const cls = t.roomControl.outcome === 'reclaimed' ? 'good' : t.roomControl.outcome === 'partial' ? 'warn' : 'bad';
+      chips.push(`<span class="chip ${cls}">room: ${t.roomControl.outcome}</span>`);
+    }
+    return `<div class="turn founder">
+      <div class="who">You</div>
+      <div class="body">${esc(t.text)}</div>
+      ${chips.length ? `<div class="annot">${chips.join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const scroll = $('scroll');
+  scroll.innerHTML = html;
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function dial(name, value, max = 1) {
+  return `<div class="dial">
+    <span class="name">${name}</span>
+    <span class="bar"><i style="width:${Math.round((value / max) * 100)}%"></i></span>
+    <span class="num">${max === 1 ? value.toFixed(2) : value}</span>
+  </div>`;
+}
+
+function renderPanel(view) {
+  const p = view.profile, m = view.metrics;
+  const MARK = { satisfied: '✓', dodged: '✗', asking: '›', unasked: '·' };
+
+  const rate = (v, bad = 0.3) => `<span class="v ${v > bad ? 'bad' : 'good'}">${pct(v)}</span>`;
+
+  $('panel').innerHTML = `
+    <section>
+      <span class="profile-kind ${p.kind}">${p.kind}</span>
+      <div style="font-weight:600;margin-bottom:3px">${esc(p.name)}</div>
+      <div style="font-size:12px;color:var(--dim);line-height:1.5">${esc(p.blurb)}</div>
+      <div style="margin-top:12px">
+        ${dial('warmth', p.dials.warmth)}
+        ${dial('derailment', p.dials.derailment)}
+        ${dial('self-regard', p.dials.selfRegard)}
+        ${dial('follow-ups', p.dials.followUpDepth, 4)}
+      </div>
+      ${p.provenance ? `<div class="prov">${esc(p.provenance.disclaimer)}</div>` : ''}
+    </section>
+
+    <section class="spine">
+      <h2>Coverage</h2>
+      <ul>${view.spine.map((t) => `
+        <li class="s-${t.state}"><span class="mark">${MARK[t.state]}</span><span class="label">${esc(t.label)}</span></li>
+      `).join('')}</ul>
+    </section>
+
+    <section>
+      <h2>What an investor would catch (${view.findings.length})</h2>
+      ${view.findings.length === 0
+        ? '<p class="empty">Nothing contradicted itself.</p>'
+        : view.findings.map((f) => `
+            <div class="finding ${f.severity}">
+              <div class="sum">${esc(f.summary)}</div>
+              <div class="probe">“${esc(f.probe)}”</div>
+            </div>`).join('')}
+    </section>
+
+    ${view.roomControl ? `
+    <section>
+      <h2>Room control</h2>
+      ${view.roomControl.judged === 0
+        ? '<p class="empty">No derails yet.</p>'
+        : `<div class="kv"><span class="k">score</span>
+             <span class="v ${view.roomControl.score >= .7 ? 'good' : view.roomControl.score >= .4 ? 'warn' : 'bad'}">${pct(view.roomControl.score)}</span></div>
+           <div class="kv"><span class="k">reclaimed / partial / followed</span>
+             <span class="v">${view.roomControl.reclaimed} / ${view.roomControl.partial} / ${view.roomControl.followed}</span></div>
+           ${view.roomControl.notes.map((n) => `<div class="prov">${esc(n)}</div>`).join('')}`}
+    </section>` : ''}
+
+    <section>
+      <h2>Claim ledger (${view.ledger.length})</h2>
+      ${view.ledger.length === 0
+        ? '<p class="empty">No numbers stated yet.</p>'
+        : `<table class="ledger">${view.ledger.map((c) => `
+            <tr><td class="m">${esc(c.metric.replace(/_/g, ' '))}</td><td class="v">${esc(c.valueRaw)}</td></tr>
+          `).join('')}</table>`}
+    </section>
+
+    <section>
+      <h2>Metrics</h2>
+      <div class="kv"><span class="k">non-answer rate</span>${rate(m.nonAnswerRate)}</div>
+      <div class="kv"><span class="k">hand-wave rate</span>${rate(m.handWaveRate)}</div>
+      <div class="kv"><span class="k">hedges / 100w</span><span class="v">${m.hedgesPer100Words.toFixed(1)}</span></div>
+      <div class="kv"><span class="k">avg words / answer</span><span class="v">${m.avgFounderWordsPerTurn}</span></div>
+      <div class="kv"><span class="k">talk ratio (you:them)</span><span class="v ${m.talkRatio < 0.8 ? 'warn' : ''}">${m.talkRatio.toFixed(1)}:1</span></div>
+    </section>
+
+    <section>
+      <h2>Usage</h2>
+      <div class="kv"><span class="k">model calls</span><span class="v">${view.usage.calls}</span></div>
+      <div class="kv"><span class="k">tokens in / cached</span><span class="v">${view.usage.promptTokens.toLocaleString()} / ${view.usage.cachedTokens.toLocaleString()}</span></div>
+      <div class="kv"><span class="k">tokens out</span><span class="v">${view.usage.completionTokens.toLocaleString()}</span></div>
+      <div class="kv"><span class="k">est. cost</span><span class="v">$${view.usage.estimatedUsd.toFixed(3)}</span></div>
+      <div class="prov">List-rate estimate. The dashboard is authoritative.</div>
+    </section>
+  `;
+}
+</script>
+</body>
+</html>

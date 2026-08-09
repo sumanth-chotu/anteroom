@@ -234,3 +234,45 @@ says so plainly.
 
 *Demo idea: run the same founder answers through `skeptic` and `blowhard` back to back. Same
 input, two completely different failure modes, two different metrics.*
+
+---
+
+## Slide: the testing UI — the system explaining itself
+
+`npm run ui` → glass-box instrument panel. Conversation left, machinery right.
+
+**This is the best live demo in the project**, because it makes the engine legible. You watch
+`spine → spine → contradiction` fire in sequence, with the claim chips that caused it appearing
+on the founder turn two messages earlier. Nothing has to be explained — it's visible.
+
+What the panel exposes live:
+
+| Section | Shows |
+|---|---|
+| Profile | Behavioural dials (warmth, derailment, self-regard) + provenance disclaimer |
+| Coverage | All 8 spine topics: satisfied ✓ / asking › / dodged ✗ / unasked · |
+| Findings | Contradictions with severity bar and the exact probe generated |
+| Claim ledger | Every number captured, normalized to canonical metrics |
+| Room control | Chaotic profiles only — reclaimed / partial / followed |
+| Metrics | Non-answer rate, hand-wave rate, hedges, talk ratio |
+| Usage | Calls, tokens, cache hits, estimated cost — live |
+
+**Demo sequence that works** (verified end to end):
+
+1. Pick **The incubator blowhard** → opening turn: *"Sit down, sit down. Reminds me of the first
+   pitch I took after my exit — tiny deal, changed everything, Marc almost came by my place
+   once. Anyway. Why you?"*
+2. Answer: *"Six years at Stripe. We have 12 design partners in production."*
+   → chips appear: `answered · concrete`, `design partners = 12`. Coverage ticks to ✓.
+3. Answer: *"All 12 of those design partners are paying customers now, and we grew 40% WoW."*
+   → chips: `dodged · concrete`, `customers paying = 12`, `growth rate wow = 40%`
+   → **two findings appear in the panel at the same moment**
+4. Investor turn tagged **CONTRADICTION**: *"You've called the same 12 both design partners and
+   paying customers. Are those the same 12 — and how many of them actually pay you?"*
+
+Four messages from cold start to the money shot, with the panel showing exactly why it happened.
+
+**Architecture note worth one line on the slide:** deliberately a plain Node server, not
+Next.js. Phase 2's WebSocket voice relay needs a long-lived process that Vercel serverless
+cannot host — so the testing UI is already running on the infrastructure the voice loop will
+need.
