@@ -40,3 +40,6 @@ Thumbs.db
 
 # Ingested corpora — public essays, cached for analysis. Not ours to redistribute.
 .tmp/corpus/
+
+# Worktree convenience symlink into the primary checkout. Machine-specific.
+node_modules
