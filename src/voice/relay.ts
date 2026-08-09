@@ -23,9 +23,30 @@ import { personaFor } from '../investor/persona.ts';
 import { addClaim, emptyLedger, type Claim, type Ledger } from '../ledger/types.ts';
 import { findingKey, runChecks } from '../ledger/checks.ts';
 import { normaliseSpokenClaim } from '../ledger/normalise.ts';
+import { parseSpokenNumber } from '../ledger/number.ts';
 import type { PreReadMemo } from '../preread/types.ts';
 
 const UPSTREAM = `${config.xai.baseUrl.replace(/^http/, 'ws')}/realtime?model=${config.xai.voice}`;
+
+/**
+ * Per-session logging.
+ *
+ * A voice session that stops mid-conversation leaves no trace otherwise — the
+ * process stays healthy, the UI just goes quiet, and there is nothing to read.
+ * Every lifecycle transition gets a line so the next silent drop is diagnosable
+ * from the server log alone.
+ */
+let sessionSeq = 0;
+function makeLog(id: string) {
+  const started = Date.now();
+  return (event: string, detail?: unknown) => {
+    const elapsed = ((Date.now() - started) / 1000).toFixed(1).padStart(6);
+    console.log(
+      `\x1b[2m[voice ${id} ${elapsed}s]\x1b[0m ${event}` +
+        (detail === undefined ? '' : ` ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`),
+    );
+  };
+}
 
 export interface VoiceSessionOptions {
   profileId: string;
@@ -103,6 +124,32 @@ export function createVoiceRelay(): WebSocketServer {
   wss.on('connection', (client: WebSocket, request: IncomingMessage) => {
     const url = new URL(request.url ?? '/', 'http://localhost');
     const profileId = url.searchParams.get('profile') ?? 'seed_skeptic';
+
+    const sessionId = `s${++sessionSeq}`;
+    const log = makeLog(sessionId);
+    log('client connected', { profile: profileId });
+
+    // Traffic counters — a drop is usually visible as one direction stopping.
+    let framesIn = 0;
+    let audioOut = 0;
+    let turns = 0;
+
+    /**
+     * Per-response state, for the tool-only turn problem.
+     *
+     * `note_claim` is silent by design. When the founder states a number the
+     * investor's whole turn can be spent on the tool call, producing no speech —
+     * and with server VAD nothing re-triggers until the founder speaks again, so
+     * the conversation simply goes quiet. That is the "it stopped in the middle"
+     * failure.
+     *
+     * The two-agent demo hit this first and fixed it; the human relay had the
+     * same bug. On a response that ends with tool calls and no audio, ask for
+     * one more so the investor actually says something.
+     */
+    let responseAudioChunks = 0;
+    let responseToolCalls = 0;
+    let responseContinued = false;
 
     let upstream: WebSocket | undefined;
 
@@ -189,7 +236,9 @@ export function createVoiceRelay(): WebSocketServer {
         source: 'spoken',
         turnId: `voice-${claimSeq}`,
         metric: normaliseSpokenClaim(parsed.metric),
-        value: Number.parseFloat(String(parsed.value).replace(/[^0-9.-]/g, '')) || null,
+        // Spoken numbers are words: "twelve", not 12. Stripping non-digits
+        // yielded null for every spoken claim and blinded the ledger.
+        value: parseSpokenNumber(String(parsed.value)),
         valueRaw: parsed.value,
         verbatim: parsed.verbatim ?? `${parsed.metric}: ${parsed.value}`,
         confidence: 0.9,
@@ -234,6 +283,8 @@ export function createVoiceRelay(): WebSocketServer {
       // Audio arrives as binary PCM16 and is forwarded as base64 without
       // inspection — the audio path stays free of work.
       if (isBinary) {
+        framesIn++;
+        if (framesIn === 1) log('first mic frame');
         sendUpstream(
           JSON.stringify({
             type: 'input_audio_buffer.append',
@@ -267,12 +318,20 @@ export function createVoiceRelay(): WebSocketServer {
       }
     }
 
-    client.on('error', (error) =>
-      notify({ kind: 'error', message: `socket: ${error.message}` }),
-    );
+    client.on('error', (error) => {
+      log('client socket error', error.message);
+      notify({ kind: 'error', message: `socket: ${error.message}` });
+    });
 
-    client.on('close', () => {
+    client.on('close', (code, reason) => {
       closed = true;
+      log('client closed', {
+        code,
+        reason: reason.toString(),
+        framesIn,
+        audioOutBytes: audioOut,
+        turns,
+      });
       upstream?.close();
     });
 
@@ -285,6 +344,7 @@ export function createVoiceRelay(): WebSocketServer {
       });
 
       upstream.on('open', () => {
+        log('upstream open');
         upstream?.send(
           JSON.stringify({
             type: 'session.update',
@@ -319,10 +379,28 @@ export function createVoiceRelay(): WebSocketServer {
           case 'ping':
             return;
 
-          case 'response.output_audio.delta':
+          case 'response.created':
+            responseAudioChunks = 0;
+            responseToolCalls = 0;
+            responseContinued = false;
+            return;
+
+          case 'response.output_audio.delta': {
             // Straight through as binary — no base64 round trip in the browser.
             if (typeof event.delta === 'string' && client.readyState === WebSocket.OPEN) {
-              client.send(Buffer.from(event.delta, 'base64'), { binary: true });
+              const chunk = Buffer.from(event.delta, 'base64');
+              responseAudioChunks++;
+              audioOut += chunk.length;
+              client.send(chunk, { binary: true });
+            }
+            return;
+          }
+
+          case 'response.done':
+            if (responseAudioChunks === 0 && responseToolCalls > 0 && !responseContinued) {
+              responseContinued = true;
+              log('tool-only turn — requesting speech');
+              sendUpstream(JSON.stringify({ type: 'response.create' }));
             }
             return;
 
@@ -331,28 +409,35 @@ export function createVoiceRelay(): WebSocketServer {
             return;
 
           case 'response.output_audio_transcript.done':
+            turns++;
+            log('investor turn', String(event.transcript ?? '').slice(0, 70));
             notify({ kind: 'transcript', role: 'investor', text: String(event.transcript ?? ''), final: true });
             return;
 
           case 'conversation.item.input_audio_transcription.completed':
+            log('founder heard', String(event.transcript ?? '').slice(0, 70));
             notify({ kind: 'transcript', role: 'founder', text: String(event.transcript ?? ''), final: true });
             return;
 
           case 'input_audio_buffer.speech_started':
+            log('VAD: speech started');
             notify({ kind: 'speech', active: true });
             return;
 
           case 'input_audio_buffer.speech_stopped':
+            log('VAD: speech stopped');
             notify({ kind: 'speech', active: false });
             return;
 
           case 'response.function_call_arguments.done':
             if (event.name === 'note_claim' && typeof event.call_id === 'string') {
+              responseToolCalls++;
               void handleClaim(event.call_id, String(event.arguments ?? '{}'));
             }
             return;
 
           case 'error':
+            log('UPSTREAM ERROR', event.error ?? event);
             notify({ kind: 'error', message: event.error?.message ?? 'upstream error' });
             return;
 
@@ -361,10 +446,26 @@ export function createVoiceRelay(): WebSocketServer {
         }
       });
 
-      upstream.on('error', (error) => notify({ kind: 'error', message: error.message }));
+      upstream.on('error', (error) => {
+        log('upstream socket error', error.message);
+        notify({ kind: 'error', message: error.message });
+      });
 
       upstream.on('close', (code, reason) => {
-        if (!closed) notify({ kind: 'status', state: 'closed', detail: `${code} ${reason.toString()}` });
+        log('UPSTREAM CLOSED', {
+          code,
+          reason: reason.toString(),
+          framesIn,
+          audioOutBytes: audioOut,
+          turns,
+        });
+        if (!closed) {
+          notify({
+            kind: 'status',
+            state: 'closed',
+            detail: `upstream closed (${code}${reason.toString() ? ` ${reason.toString()}` : ''})`,
+          });
+        }
         client.close();
       });
     }

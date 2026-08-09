@@ -588,3 +588,47 @@ there is to kill the process.
 **Verified by reproducing it:** connect, send `start`, then blast 60 audio frames immediately —
 exactly what the mic does. Previously fatal. Now: 152KB of audio back, transcript *"I'm Bill
 Gurley with Benchmark. What are you building?"*, process alive, HTTP 200.
+
+---
+
+## 2026-08-08 — Two bugs behind "it stopped in the middle"
+
+**Phase:** 2 · **Commit:** pending
+
+**1. The conversation died on a tool-only turn.** `note_claim` is silent by design, so when the
+founder states a number the investor's entire turn can be spent on the tool call — no speech.
+With server VAD nothing re-triggers until the founder speaks again, so the session simply goes
+quiet. That is the reported symptom exactly.
+
+The two-agent demo hit this first and I fixed it there; I did not port the fix to the human
+relay. Now a response ending with tool calls and no audio triggers one continuation. Visible in
+the log: `tool-only turn — requesting speech` → the investor speaks 1s later.
+
+**2. The voice ledger was blind to spoken numbers.** Transcripts spell numbers out. The voice
+path parsed values with `parseFloat(strip non-digits)`, so "twelve" became `null` — and every
+check that compares values silently skipped. The founder said *"twelve design partners and all
+twelve are paying customers"*, both claims were captured, and the conflation check found
+nothing.
+
+`ledger/number.ts` parses written-out numbers, digits with scale words and suffixes, and the
+fuzzy quantities founders actually say ("a dozen", "a couple hundred"). Returns `null` rather
+than guessing — a wrong value is worse than an absent one, because it produces a confident false
+contradiction. 5 tests.
+
+**Also added: per-session relay logging.** The first attempt at diagnosing this had nothing to
+go on — the process stayed healthy, the UI went quiet, and the server log was empty. Every
+lifecycle transition now gets a line with elapsed time and traffic counters, so the next silent
+drop is readable from the log alone. Browser side also surfaces socket closes and AudioContext
+suspension instead of failing quietly.
+
+**Learned:** both bugs were invisible to every probe because probes do not speak. Building a
+test that synthesises founder speech and feeds it into the relay as fake mic input found both in
+one run — and is now the closest thing to an automated voice test without a human.
+
+**Verified end to end:**
+```
+claim: design partners = twelve
+claim: paying customers = twelve
+FINDING: The same number (12) was described as both design partners and customers paying.
+INVESTOR: "You've called the same 12 both design partners and customers paying. Are those the same 12…"
+```

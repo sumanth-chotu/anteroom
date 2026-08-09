@@ -29,6 +29,7 @@ import { FOUNDER_SCRIPTS, type FounderScript } from './founder.ts';
 import { addClaim, emptyLedger, type Claim, type Ledger } from '../ledger/types.ts';
 import { findingKey, runChecks } from '../ledger/checks.ts';
 import { normaliseSpokenClaim } from '../ledger/normalise.ts';
+import { parseSpokenNumber } from '../ledger/number.ts';
 import type { PreReadMemo } from '../preread/types.ts';
 
 const UPSTREAM = `${config.xai.baseUrl.replace(/^http/, 'ws')}/realtime?model=${config.xai.voice}`;
@@ -271,7 +272,9 @@ export async function runDuo(options: DuoOptions): Promise<void> {
         source: 'spoken',
         turnId: `duo-${claimSeq}`,
         metric: normaliseSpokenClaim(parsed.metric),
-        value: Number.parseFloat(String(parsed.value).replace(/[^0-9.-]/g, '')) || null,
+        // Spoken numbers are words: "twelve", not 12. Stripping non-digits
+        // yielded null for every spoken claim and blinded the ledger.
+        value: parseSpokenNumber(String(parsed.value)),
         valueRaw: parsed.value,
         verbatim: parsed.verbatim ?? `${parsed.metric}: ${parsed.value}`,
         confidence: 0.9,

@@ -94,7 +94,22 @@ export class VoiceSession {
     };
 
     this.socket.onerror = () => this.onNotice({ kind: 'error', message: 'connection failed' });
-    this.socket.onclose = () => this.onNotice({ kind: 'status', state: 'closed' });
+    this.socket.onclose = (event) =>
+      this.onNotice({
+        kind: 'status',
+        state: 'closed',
+        detail: event.reason || `code ${event.code}`,
+      });
+
+    // The AudioContext can be suspended by the browser (tab backgrounded, OS
+    // audio change). The session then looks alive but hears and says nothing —
+    // indistinguishable from "it stopped" unless we say so.
+    this.ctx.onstatechange = () => {
+      if (this.ctx?.state === 'suspended') {
+        this.onNotice({ kind: 'error', message: 'audio suspended — click the page to resume' });
+        void this.ctx.resume();
+      }
+    };
   }
 
   #startCapture() {
