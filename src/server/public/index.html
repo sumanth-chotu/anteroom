@@ -313,6 +313,7 @@
    * portrait instead of a black rectangle — and an investor with no generated
    * motion simply keeps showing the still.
    */
+  #facemount:not(:empty) { padding: 16px 20px 0; }
   .face-box {
     position: relative; width: 100%; aspect-ratio: 3 / 2;
     border: 1px solid var(--line); border-radius: var(--radius);
@@ -451,7 +452,16 @@
     </div>
   </div>
 
-  <aside id="panel"></aside>
+  <!--
+    The avatar lives OUTSIDE #panel on purpose. renderPanel() replaces its own
+    innerHTML on every turn, which would destroy and recreate the <video>
+    elements each time — resetting playback and flickering once per question.
+    This mount is written only when the investor actually changes.
+  -->
+  <aside id="side">
+    <div id="facemount"></div>
+    <div id="panel"></div>
+  </aside>
 </main>
 
 <script type="module">
@@ -490,6 +500,22 @@ for (const kind of ['corpus', 'synthetic', 'derived', 'character']) {
   $('profile').appendChild(group);
 }
 $('profile').value = 'seed_skeptic';
+
+// Show the investor's face as soon as they are selected, before any session
+// exists. Picking someone and seeing nothing until you press New session made
+// the avatar feel broken even when it worked.
+function previewSelectedInvestor() {
+  const chosen = profiles.find((p) => p.id === $('profile').value);
+  if (chosen) {
+    mountAvatar(chosen);
+    resumeAvatar();
+  }
+}
+// Registering the listener is safe here; the initial call is not. It reaches
+// `avatarTalking`, a `let` declared further down, so running it during module
+// evaluation would throw a temporal-dead-zone ReferenceError. It is invoked at
+// the bottom of this script instead.
+$('profile').addEventListener('change', previewSelectedInvestor);
 
 // ── networking ──────────────────────────────────────────────────────────────
 function setBusy(on) {
@@ -985,6 +1011,76 @@ function appendPending(text) {
 function render(view) {
   renderConversation(view);
   renderPanel(view);
+  driveAvatar(view);
+}
+
+// ── the avatar, in text mode ────────────────────────────────────────────────
+//
+// This used to only ever run in voice mode: `setSpeaking` was called from the
+// relay's speech notices and from nowhere else, so in a text session the loops
+// sat at opacity 0 and the panel showed a still portrait forever. The bug hid
+// because it looks exactly like "the video failed to load".
+//
+// There is no real speech to follow here, so the speaking loop runs for roughly
+// as long as the line would take to say out loud, then falls back to idle.
+
+let lastSpokenTurnId = null;
+let speakingTimer = null;
+/** Words per second of speech. ~155 wpm, a normal talking pace. */
+const SPEAKING_WPS = 2.6;
+
+function driveAvatar(view) {
+  mountAvatar(view.profile);
+  resumeAvatar();
+
+  const latest = [...view.turns].reverse().find((t) => t.role === 'investor');
+  if (!latest || latest.id === lastSpokenTurnId) return;
+  lastSpokenTurnId = latest.id;
+
+  const words = latest.text.trim().split(/\s+/).filter(Boolean).length;
+  const ms = Math.min(9000, Math.max(2200, (words / SPEAKING_WPS) * 1000));
+
+  setSpeaking(true);
+  clearTimeout(speakingTimer);
+  speakingTimer = setTimeout(() => setSpeaking(false), ms);
+}
+
+/**
+ * Write the face box, but only when the investor actually changed.
+ *
+ * Rebuilding it every render would recreate the <video> elements and restart
+ * playback once per turn.
+ */
+let mountedProfileId = null;
+function mountAvatar(profile) {
+  if (!profile || profile.id === mountedProfileId) return;
+  mountedProfileId = profile.id;
+  lastSpokenTurnId = null;
+  $('facemount').innerHTML = faceBox(profile);
+}
+
+/**
+ * Autoplay is not guaranteed even for a muted video.
+ *
+ * Chrome allows muted autoplay by default, but it is a policy rather than a
+ * promise — it can be off, and `play()` then rejects silently, which is
+ * indistinguishable from a broken asset. So playback is retried on the first
+ * real user gesture, which is always allowed.
+ */
+function resumeAvatar() {
+  const active = document.querySelector('.face-box video.on');
+  if (active) {
+    if (active.paused) active.play().catch(() => {});
+    return;
+  }
+  // Nothing marked visible yet — start whichever loop the current state wants.
+  // Guarded on `avatarTalking` so a gesture mid-sentence does not yank the
+  // speaking loop back to idle.
+  setSpeaking(avatarTalking);
+}
+
+for (const event of ['pointerdown', 'keydown']) {
+  document.addEventListener(event, resumeAvatar, { passive: true });
 }
 
 function renderConversation(view) {
@@ -1081,7 +1177,10 @@ function faceBox(p) {
  * Safe to call when no motion exists — every lookup is guarded, so an investor
  * with only a still just keeps showing it.
  */
+let avatarTalking = false;
+
 function setSpeaking(talking) {
+  avatarTalking = !!talking;
   const box = $('face-box');
   if (box) box.classList.toggle('talking', !!talking);
 
@@ -1112,7 +1211,6 @@ function renderPanel(view) {
 
   $('panel').innerHTML = `
     <section>
-      ${faceBox(p)}
       ${p.persona ? `
         <div class="who-card" style="align-items:center">
           <div>
@@ -1288,6 +1386,10 @@ function renderPanel(view) {
     </section>
   `;
 }
+
+// Everything is declared by this point, so the avatar can be shown for whoever
+// the dropdown currently has selected.
+previewSelectedInvestor();
 </script>
 </body>
 </html>
